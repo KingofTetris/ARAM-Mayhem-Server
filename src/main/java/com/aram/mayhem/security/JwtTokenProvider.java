@@ -33,6 +33,7 @@ public class JwtTokenProvider {
         return Jwts.builder()
                 .subject(userId.toString())
                 .claim("email", email)
+                .claim("type", "access")
                 .issuedAt(now)
                 .expiration(expiry)
                 .signWith(secretKey)
@@ -60,6 +61,11 @@ public class JwtTokenProvider {
     public String getEmailFromToken(String token) {
         Claims claims = parseClaims(token);
         return claims.get("email", String.class);
+    }
+
+    public String getTokenType(String token) {
+        Claims claims = parseClaims(token);
+        return claims.get("type", String.class);
     }
 
     public boolean validateToken(String token) {

@@ -91,22 +91,23 @@ public class AuthService {
     public AuthResponse refreshToken(RefreshTokenRequest request) {
         String refreshToken = request.getRefreshToken();
 
-        // Validate refresh token
         if (!jwtTokenProvider.validateToken(refreshToken)) {
             throw new BusinessException(401, "Invalid or expired refresh token");
         }
 
-        // Verify it's actually a refresh token (has "type": "refresh" claim)
+        String tokenType = jwtTokenProvider.getTokenType(refreshToken);
+        if (!"refresh".equals(tokenType)) {
+            throw new BusinessException(401, "Invalid token type: expected 'refresh' but got '" + tokenType + "'");
+        }
+
         Long userId = jwtTokenProvider.getUserIdFromToken(refreshToken);
         String email = jwtTokenProvider.getEmailFromToken(refreshToken);
 
-        // Verify user still exists
         User user = userMapper.selectById(userId);
         if (user == null) {
             throw new BusinessException(401, "User not found");
         }
 
-        // Generate new token pair
         String newAccessToken = jwtTokenProvider.generateAccessToken(userId, email);
         String newRefreshToken = jwtTokenProvider.generateRefreshToken(userId, email);
 
