@@ -8,7 +8,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class DataInitializer implements CommandLineRunner {
@@ -18,6 +20,33 @@ public class DataInitializer implements CommandLineRunner {
     public DataInitializer(HeroMapper heroMapper) {
         this.heroMapper = heroMapper;
     }
+
+    private static final Map<String, List<String>> COUNTER_TIPS_BY_ROLE = Map.of(
+            "Fighter", List.of("保持距离风筝", "利用控制技能打断突进", "集火优先击杀", "购买护甲装备对抗"),
+            "Mage", List.of("利用突进贴身", "购买魔抗装备", "躲避关键技能后反打", "侧翼切入绕过前排"),
+            "Assassin", List.of("抱团避免落单", "购买中娅沙漏", "携带虚弱召唤师技能", "辅助优先保护C位"),
+            "Tank", List.of("忽略坦克集火C位", "购买百分比生命值伤害装备", "利用真实伤害英雄", "避免被开团"),
+            "Marksman", List.of("刺客侧翼切入", "利用突进贴身", "购买兰顿之兆减暴击", "闪现开团秒杀"),
+            "Support", List.of("优先击杀辅助", "忽略辅助打C位", "利用AOE同时伤害", "购买重伤克制治疗")
+    );
+
+    private static final Map<String, List<String>> SYNERGIES_BY_ROLE = Map.of(
+            "Fighter", List.of("控制型坦克", "增益型辅助", "AOE法师", "保护型辅助"),
+            "Mage", List.of("前排坦克", "控制型辅助", "突进战士", "开团型坦克"),
+            "Assassin", List.of("控制型辅助", "减速型法师", "保护型辅助", "开团型坦克"),
+            "Tank", List.of("AOE法师", "持续输出射手", "增益型辅助", "突进战士"),
+            "Marksman", List.of("保护型辅助", "前排坦克", "控制型法师", "增益型辅助"),
+            "Support", List.of("持续输出射手", "突进战士", "AOE法师", "前排坦克")
+    );
+
+    private static final Map<String, String> RECOMMENDED_BUILD_BY_ROLE = Map.of(
+            "Fighter", "渴血战斧 → 斯特拉克的挑战护手 → 破败王者之刃 → 振奋盔甲 → 兰顿之兆 → 铁板靴",
+            "Mage", "卢登的伙伴 → 影焰 → 灭世者的死亡之帽 → 虚空之杖 → 中娅沙漏 → 法师之靴",
+            "Assassin", "幽梦之灵 → 收集者 → 赛瑞尔达的怨恨 → 夜之锋刃 → 守护天使 → 明悟之靴",
+            "Tank", "凛冬之临 → 振奋盔甲 → 兰顿之兆 → 石像鬼石板甲 → 骑士之誓 → 铁板靴",
+            "Marksman", "海妖杀手 → 无尽之刃 → 幻影之舞 → 收集者 → 守护天使 → 狂战士胫甲",
+            "Support", "帝国指令 → 流水法杖 → 救赎 → 香炉 → 骑士之誓 → 明悟之靴"
+    );
 
     @Override
     @Transactional
@@ -179,7 +208,7 @@ public class DataInitializer implements CommandLineRunner {
                 createHero(150, "Vladimir", "弗拉基米尔", "猩红收割者", "Mage", "S", 52.2, 6.5, "中"),
                 createHero(151, "Volibear", "沃利贝尔", "雷霆咆哮", "Fighter", "A", 50.7, 4.8, "低"),
                 createHero(152, "Warwick", "沃里克", "嗜血猎手", "Fighter", "S", 52.8, 6.7, "低"),
-                createHero(153, "Wukong", "孙悟空", "齐天大圣", "Fighter", "A", 50.5, 4.3, "中"),
+                createHero(153, "Wukong", "孙悟空", "齐天大圣", "Fighter", "A", 50.5, 4.3, "低"),
                 createHero(154, "Xayah", "霞", "逆羽", "Marksman", "A", 50.3, 4.6, "中"),
                 createHero(155, "Xerath", "泽拉斯", "远古巫灵", "Mage", "S", 52.1, 5.8, "低"),
                 createHero(156, "XinZhao", "赵信", "德邦总管", "Fighter", "A", 50.6, 5.3, "低"),
@@ -213,8 +242,144 @@ public class DataInitializer implements CommandLineRunner {
         hero.setWinRate(BigDecimal.valueOf(winRate));
         hero.setPickRate(BigDecimal.valueOf(pickRate));
         hero.setConfidenceLevel(confidenceLevel);
+        hero.setDescription(generateDescription(nameZh, title, role));
+        hero.setSkills(generateSkills(nameEn, role));
+        hero.setCounterTips(COUNTER_TIPS_BY_ROLE.getOrDefault(role, List.of()));
+        hero.setSynergies(SYNERGIES_BY_ROLE.getOrDefault(role, List.of()));
+        hero.setAvgKills(generateAvgKills(role));
+        hero.setAvgDeaths(generateAvgDeaths(role));
+        hero.setAvgAssists(generateAvgAssists(role));
+        hero.setRecommendedBuild(RECOMMENDED_BUILD_BY_ROLE.getOrDefault(role, "通用出装路线"));
         hero.setVersion("14.10");
         hero.setUpdatedAt(LocalDateTime.now());
         return hero;
+    }
+
+    private String generateDescription(String nameZh, String title, String role) {
+        return nameZh + "，" + title + "。在ARAM模式中定位为" + getRoleZh(role) +
+                "，需要根据队伍阵容灵活调整打法。合理利用技能组合和站位是取胜关键。";
+    }
+
+    private String getRoleZh(String role) {
+        return switch (role) {
+            case "Fighter" -> "战士";
+            case "Mage" -> "法师";
+            case "Assassin" -> "刺客";
+            case "Tank" -> "坦克";
+            case "Marksman" -> "射手";
+            case "Support" -> "辅助";
+            default -> role;
+        };
+    }
+
+    private List<Hero.SkillData> generateSkills(String nameEn, String role) {
+        List<Hero.SkillData> skills = new ArrayList<>();
+        String[] keys = {"P", "Q", "W", "E", "R"};
+        String[] names = generateSkillNames(nameEn, role);
+        String[] descriptions = generateSkillDescriptions(role);
+        for (int i = 0; i < 5; i++) {
+            Hero.SkillData skill = new Hero.SkillData();
+            skill.setKey(keys[i]);
+            skill.setName(names[i]);
+            skill.setDescription(descriptions[i]);
+            skills.add(skill);
+        }
+        return skills;
+    }
+
+    private String[] generateSkillNames(String nameEn, String role) {
+        return switch (role) {
+            case "Fighter" -> new String[]{"战斗本能", "突进斩击", "防御姿态", "战意冲锋", "终极裁决"};
+            case "Mage" -> new String[]{"魔力涌动", "能量弹射", "法力护盾", "空间位移", "毁灭魔法"};
+            case "Assassin" -> new String[]{"暗影步", "致命突刺", "隐匿之雾", "疾风步", "暗杀标记"};
+            case "Tank" -> new String[]{"坚韧体魄", "重击", "护盾壁垒", "嘲讽冲锋", "不灭意志"};
+            case "Marksman" -> new String[]{"精准射击", "穿透箭矢", "快速闪避", "陷阱布置", "弹幕风暴"};
+            case "Support" -> new String[]{"生命祝福", "治愈之光", "护盾庇护", "加速光环", "群体治疗"};
+            default -> new String[]{"被动技能", "技能Q", "技能W", "技能E", "技能R"};
+        };
+    }
+
+    private String[] generateSkillDescriptions(String role) {
+        return switch (role) {
+            case "Fighter" -> new String[]{
+                    "每次攻击或受到攻击时获得攻击力加成，最多叠加5层",
+                    "向前方突进并对路径上的敌人造成物理伤害",
+                    "激活后获得护盾，持续3秒，期间减少受到的伤害",
+                    "向目标方向冲锋，击飞沿途敌人0.5秒",
+                    "对大范围内敌人造成物理伤害，已损失生命值越高伤害越高"
+            };
+            case "Mage" -> new String[]{
+                    "施放技能后获得移动速度加成，持续2秒",
+                    "发射能量弹，命中敌人后造成魔法伤害并弹射至附近敌人",
+                    "创造法力护盾，吸收即将到来的伤害",
+                    "短距离传送至目标位置，留下残影迷惑敌人",
+                    "在目标区域释放毁灭性魔法，造成大量AOE魔法伤害"
+            };
+            case "Assassin" -> new String[]{
+                    "脱离战斗后获得移动速度加成和穿透效果",
+                    "对目标发动快速突刺，造成物理伤害并标记敌人",
+                    "释放迷雾遮蔽自身，进入隐身状态1秒",
+                    "向目标方向快速冲刺，穿过敌人造成伤害",
+                    "标记目标后发动致命一击，目标已损失生命值越高伤害越高"
+            };
+            case "Tank" -> new String[]{
+                    "受到伤害时获得护甲和魔抗加成，持续6秒",
+                    "对前方敌人造成物理伤害并减速30%",
+                    "激活护盾，吸收伤害并反弹部分伤害给攻击者",
+                    "向目标冲锋并嘲讽周围敌人1秒，强制攻击自己",
+                    "获得大量生命值和伤害减免，持续8秒，期间无法被击杀"
+            };
+            case "Marksman" -> new String[]{
+                    "连续攻击同一目标时攻击速度逐渐提升",
+                    "发射穿透箭矢，对直线上的敌人造成物理伤害",
+                    "快速翻滚闪避，重置普攻计时器",
+                    "在地面放置陷阱，触发后减速并暴露敌人",
+                    "向前方扇形区域发射弹幕，造成大量物理伤害"
+            };
+            case "Support" -> new String[]{
+                    "附近友军获得生命回复加成",
+                    "发射治愈光束，为友军回复生命值",
+                    "为目标友军施加护盾，吸收伤害持续4秒",
+                    "提升附近友军移动速度30%，持续3秒",
+                    "大范围治疗所有友军，并清除一个负面效果"
+            };
+            default -> new String[]{"被动效果", "主动技能Q", "主动技能W", "主动技能E", "终极技能R"};
+        };
+    }
+
+    private BigDecimal generateAvgKills(String role) {
+        return switch (role) {
+            case "Assassin" -> BigDecimal.valueOf(7.5 + Math.random() * 3);
+            case "Mage" -> BigDecimal.valueOf(6.0 + Math.random() * 3);
+            case "Fighter" -> BigDecimal.valueOf(5.5 + Math.random() * 3);
+            case "Marksman" -> BigDecimal.valueOf(5.0 + Math.random() * 3);
+            case "Tank" -> BigDecimal.valueOf(3.5 + Math.random() * 2);
+            case "Support" -> BigDecimal.valueOf(2.0 + Math.random() * 2);
+            default -> BigDecimal.valueOf(5.0);
+        };
+    }
+
+    private BigDecimal generateAvgDeaths(String role) {
+        return switch (role) {
+            case "Assassin" -> BigDecimal.valueOf(5.5 + Math.random() * 2);
+            case "Marksman" -> BigDecimal.valueOf(5.0 + Math.random() * 2);
+            case "Mage" -> BigDecimal.valueOf(4.5 + Math.random() * 2);
+            case "Fighter" -> BigDecimal.valueOf(4.0 + Math.random() * 2);
+            case "Tank" -> BigDecimal.valueOf(3.5 + Math.random() * 2);
+            case "Support" -> BigDecimal.valueOf(4.0 + Math.random() * 2);
+            default -> BigDecimal.valueOf(4.5);
+        };
+    }
+
+    private BigDecimal generateAvgAssists(String role) {
+        return switch (role) {
+            case "Support" -> BigDecimal.valueOf(10.0 + Math.random() * 4);
+            case "Tank" -> BigDecimal.valueOf(8.0 + Math.random() * 3);
+            case "Mage" -> BigDecimal.valueOf(7.0 + Math.random() * 3);
+            case "Fighter" -> BigDecimal.valueOf(6.0 + Math.random() * 3);
+            case "Assassin" -> BigDecimal.valueOf(5.0 + Math.random() * 3);
+            case "Marksman" -> BigDecimal.valueOf(5.0 + Math.random() * 2);
+            default -> BigDecimal.valueOf(6.0);
+        };
     }
 }

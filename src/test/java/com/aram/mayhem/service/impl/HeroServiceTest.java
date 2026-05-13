@@ -72,6 +72,13 @@ class HeroServiceTest {
         hero.setPickRate(pickRate);
         hero.setImageUrl("https://example.com/" + nameEn.toLowerCase() + ".png");
         hero.setConfidenceLevel("High");
+        hero.setDescription(nameZh + "，" + title + "。在ARAM模式中定位为" + role + "。");
+        hero.setCounterTips(List.of("保持距离", "集火优先击杀"));
+        hero.setSynergies(List.of("前排坦克", "保护型辅助"));
+        hero.setAvgKills(BigDecimal.valueOf(5.5));
+        hero.setAvgDeaths(BigDecimal.valueOf(4.2));
+        hero.setAvgAssists(BigDecimal.valueOf(7.1));
+        hero.setRecommendedBuild("核心装备 → 防御装备");
         hero.setVersion("14.10");
         return hero;
     }
@@ -429,14 +436,18 @@ class HeroServiceTest {
         assertEquals(new BigDecimal("15.3"), result.getPickRate());
         assertEquals("https://example.com/ashe.png", result.getImageUrl());
 
-        // 验证 convertToDetailVO 中的固定字段
-        assertEquals("High", result.getDescription()); // confidenceLevel mapped to description
+        // 验证 convertToDetailVO 中的详情字段
+        assertNotNull(result.getDescription());
+        assertTrue(result.getDescription().contains("艾希"));
         assertNotNull(result.getSkills());
-        assertTrue(result.getSkills().isEmpty());
         assertNotNull(result.getCounterTips());
-        assertTrue(result.getCounterTips().isEmpty());
+        assertEquals(2, result.getCounterTips().size());
         assertNotNull(result.getSynergies());
-        assertTrue(result.getSynergies().isEmpty());
+        assertEquals(2, result.getSynergies().size());
+        assertNotNull(result.getAvgKills());
+        assertNotNull(result.getAvgDeaths());
+        assertNotNull(result.getAvgAssists());
+        assertNotNull(result.getRecommendedBuild());
 
         verify(mockMapper).selectById(1L);
     }
@@ -462,7 +473,11 @@ class HeroServiceTest {
         assertEquals("S", result.getTier());
         assertEquals(new BigDecimal("53.2"), result.getWinRate());
         assertEquals(new BigDecimal("18.7"), result.getPickRate());
-        assertEquals("Medium", result.getDescription());
+        assertNotNull(result.getDescription());
+        assertTrue(result.getDescription().contains("劫"));
+        assertNotNull(result.getCounterTips());
+        assertNotNull(result.getSynergies());
+        assertNotNull(result.getRecommendedBuild());
     }
 
     // ============================================================

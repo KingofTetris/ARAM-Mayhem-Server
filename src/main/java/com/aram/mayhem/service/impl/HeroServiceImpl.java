@@ -98,10 +98,30 @@ public class HeroServiceImpl implements HeroService {
         vo.setWinRate(hero.getWinRate());
         vo.setPickRate(hero.getPickRate());
         vo.setImageUrl(hero.getImageUrl());
-        vo.setDescription(hero.getConfidenceLevel());
-        vo.setSkills(List.of());
-        vo.setCounterTips(List.of());
-        vo.setSynergies(List.of());
+        vo.setDescription(hero.getDescription());
+        vo.setAvgKills(hero.getAvgKills());
+        vo.setAvgDeaths(hero.getAvgDeaths());
+        vo.setAvgAssists(hero.getAvgAssists());
+        vo.setRecommendedBuild(hero.getRecommendedBuild());
+
+        if (hero.getSkills() != null) {
+            List<HeroDetailVO.SkillInfo> skillInfos = hero.getSkills().stream()
+                    .map(skill -> {
+                        HeroDetailVO.SkillInfo info = new HeroDetailVO.SkillInfo();
+                        info.setKey(skill.getKey());
+                        info.setName(skill.getName());
+                        info.setDescription(skill.getDescription());
+                        return info;
+                    })
+                    .toList();
+            vo.setSkills(skillInfos);
+        } else {
+            vo.setSkills(List.of());
+        }
+
+        vo.setCounterTips(hero.getCounterTips() != null ? hero.getCounterTips() : List.of());
+        vo.setSynergies(hero.getSynergies() != null ? hero.getSynergies() : List.of());
+
         return vo;
     }
 }
