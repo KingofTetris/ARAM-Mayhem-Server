@@ -9,11 +9,15 @@ import com.aram.mayhem.entity.User;
 import com.aram.mayhem.mapper.UserMapper;
 import com.aram.mayhem.security.JwtTokenProvider;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
 public class AuthService {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
@@ -26,15 +30,16 @@ public class AuthService {
     }
 
     public AuthResponse register(RegisterRequest request) {
-        // Check if email already exists
+        log.info("User registration attempt: email={}", request.getEmail());
+
         User existing = userMapper.selectOne(
                 new LambdaQueryWrapper<User>().eq(User::getEmail, request.getEmail())
         );
         if (existing != null) {
+            log.warn("Registration failed: email already registered, email={}", request.getEmail());
             throw new BusinessException(409, "Email already registered");
         }
 
-        // Create new user
         User user = new User();
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
@@ -45,8 +50,8 @@ public class AuthService {
         user.setAvatarUrl("");
 
         userMapper.insert(user);
+        log.info("User registered successfully: userId={}, email={}", user.getId(), user.getEmail());
 
-        // Generate tokens
         String accessToken = jwtTokenProvider.generateAccessToken(user.getId(), user.getEmail());
         String refreshToken = jwtTokenProvider.generateRefreshToken(user.getId(), user.getEmail());
 
@@ -61,20 +66,23 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request) {
-        // Find user by email
+        log.info("Login attempt: email={}", request.getEmail());
+
         User user = userMapper.selectOne(
                 new LambdaQueryWrapper<User>().eq(User::getEmail, request.getEmail())
         );
         if (user == null) {
+            log.warn("Login failed: user not found, email={}", request.getEmail());
             throw new BusinessException(401, "Invalid email or password");
         }
 
-        // Verify password
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            log.warn("Login failed: invalid password, email={}", request.getEmail());
             throw new BusinessException(401, "Invalid email or password");
         }
 
-        // Generate tokens
+        log.info("Login successful: userId={}, email={}", user.getId(), user.getEmail());
+
         String accessToken = jwtTokenProvider.generateAccessToken(user.getId(), user.getEmail());
         String refreshToken = jwtTokenProvider.generateRefreshToken(user.getId(), user.getEmail());
 
@@ -92,11 +100,13 @@ public class AuthService {
         String refreshToken = request.getRefreshToken();
 
         if (!jwtTokenProvider.validateToken(refreshToken)) {
+            log.warn("Token refresh failed: invalid or expired token");
             throw new BusinessException(401, "Invalid or expired refresh token");
         }
 
         String tokenType = jwtTokenProvider.getTokenType(refreshToken);
         if (!"refresh".equals(tokenType)) {
+            log.warn("Token refresh failed: wrong token type={}", tokenType);
             throw new BusinessException(401, "Invalid token type: expected 'refresh' but got '" + tokenType + "'");
         }
 
@@ -105,8 +115,11 @@ public class AuthService {
 
         User user = userMapper.selectById(userId);
         if (user == null) {
+            log.warn("Token refresh failed: user not found, userId={}", userId);
             throw new BusinessException(401, "User not found");
         }
+
+        log.info("Token refresh successful: userId={}", userId);
 
         String newAccessToken = jwtTokenProvider.generateAccessToken(userId, email);
         String newRefreshToken = jwtTokenProvider.generateRefreshToken(userId, email);

@@ -21,25 +21,28 @@ public class GlobalExceptionHandler {
                 .map(e -> e.getField() + ": " + e.getDefaultMessage())
                 .reduce((a, b) -> a + "; " + b)
                 .orElse("parameter validation failed");
+        log.warn("Validation error: {}", message);
         return Result.error(400, message);
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Result<Void> handleConstraintViolation(ConstraintViolationException ex) {
+        log.warn("Constraint violation: {}", ex.getMessage());
         return Result.error(400, ex.getMessage());
     }
 
     @ExceptionHandler(BusinessException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Result<Void> handleBusiness(BusinessException ex) {
+        log.warn("Business error: code={}, message={}", ex.getCode(), ex.getMessage());
         return Result.error(ex.getCode(), ex.getMessage());
     }
 
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public Result<Void> handleUnknown(Exception ex) {
-        log.error("unknown error", ex);
+        log.error("Unhandled exception: {}", ex.getMessage(), ex);
         return Result.error(500, "internal server error");
     }
 }

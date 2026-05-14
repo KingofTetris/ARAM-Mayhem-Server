@@ -13,6 +13,8 @@ import com.aram.mayhem.mapper.HeroMapper;
 import com.aram.mayhem.service.AugmentService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -31,6 +33,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class AugmentServiceImpl implements AugmentService {
+
+    private static final Logger log = LoggerFactory.getLogger(AugmentServiceImpl.class);
 
     private static final String CACHE_KEY_PREFIX = "augment:list:";
     private static final Duration CACHE_TTL = Duration.ofMinutes(30);
@@ -140,8 +144,11 @@ public class AugmentServiceImpl implements AugmentService {
 
     @Override
     public List<AugmentRecommendResponse> getRecommendations(AugmentRecommendRequest request) {
+        log.info("Getting augment recommendations: heroId={}, selectedAugments={}", request.getHeroId(), request.getSelectedAugmentIds());
+
         Hero hero = heroMapper.selectById(request.getHeroId());
         if (hero == null) {
+            log.warn("Hero not found for recommendations: heroId={}", request.getHeroId());
             return new ArrayList<>();
         }
 

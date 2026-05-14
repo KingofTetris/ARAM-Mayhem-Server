@@ -9,6 +9,8 @@ import com.aram.mayhem.entity.Hero;
 import com.aram.mayhem.common.BusinessException;
 import com.aram.mayhem.mapper.HeroMapper;
 import com.aram.mayhem.service.HeroService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -17,6 +19,8 @@ import java.util.List;
 
 @Service
 public class HeroServiceImpl implements HeroService {
+
+    private static final Logger log = LoggerFactory.getLogger(HeroServiceImpl.class);
 
     private final HeroMapper heroMapper;
 
@@ -66,8 +70,10 @@ public class HeroServiceImpl implements HeroService {
     @Override
     @Cacheable(value = "heroDetail", key = "#id", unless = "#result == null")
     public HeroDetailVO getHeroDetail(Long id) {
+        log.info("Getting hero detail: id={}", id);
         Hero hero = heroMapper.selectById(id);
         if (hero == null) {
+            log.warn("Hero not found: id={}", id);
             throw new BusinessException(404, "Hero not found with id: " + id);
         }
         return convertToDetailVO(hero);
