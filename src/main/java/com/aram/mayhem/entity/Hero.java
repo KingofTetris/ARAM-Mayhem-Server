@@ -56,6 +56,10 @@ public class Hero {
 
     private String version;
 
+    private Boolean isVersionTrap;
+
+    private LocalDateTime versionTrapSince;
+
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updatedAt;
 

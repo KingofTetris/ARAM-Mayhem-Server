@@ -24,4 +24,6 @@ public class HeroListVO {
     private BigDecimal pickRate;
 
     private String imageUrl;
+
+    private Boolean isVersionTrap;
 }

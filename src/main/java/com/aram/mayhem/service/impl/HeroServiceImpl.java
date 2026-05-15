@@ -90,6 +90,7 @@ public class HeroServiceImpl implements HeroService {
         vo.setWinRate(hero.getWinRate());
         vo.setPickRate(hero.getPickRate());
         vo.setImageUrl(hero.getImageUrl());
+        vo.setIsVersionTrap(hero.getIsVersionTrap());
         return vo;
     }
 
@@ -104,6 +105,7 @@ public class HeroServiceImpl implements HeroService {
         vo.setWinRate(hero.getWinRate());
         vo.setPickRate(hero.getPickRate());
         vo.setImageUrl(hero.getImageUrl());
+        vo.setIsVersionTrap(hero.getIsVersionTrap());
         vo.setDescription(hero.getDescription());
         vo.setAvgKills(hero.getAvgKills());
         vo.setAvgDeaths(hero.getAvgDeaths());

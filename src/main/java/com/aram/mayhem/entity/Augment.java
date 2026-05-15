@@ -41,6 +41,10 @@ public class Augment {
 
     private Boolean isTrap;
 
+    private Boolean isVersionTrap;
+
+    private LocalDateTime versionTrapSince;
+
     private String version;
 
     @TableField(fill = FieldFill.INSERT_UPDATE)
