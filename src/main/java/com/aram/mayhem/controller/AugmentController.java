@@ -21,6 +21,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/**
+ * 强化符文控制器
+ *
+ * 路径前缀：/api/augments
+ * 权限：公开访问
+ * 功能：符文列表查询、符文详情、套装进度、智能推荐
+ * 关联：AugmentService, AugmentListVO, AugmentVO, SynergyProgressResponse, AugmentRecommendResponse
+ */
 @Tag(name = "强化符文", description = "强化符文查询接口")
 @RestController
 @RequestMapping("/api/augments")

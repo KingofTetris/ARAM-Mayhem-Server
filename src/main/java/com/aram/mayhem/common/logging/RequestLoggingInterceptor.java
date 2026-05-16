@@ -7,6 +7,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
+/**
+ * 请求日志拦截器
+ *
+ * 功能：记录每个 HTTP 请求的方法、URI、客户端 IP、响应状态、耗时
+ * 日志级别：INFO（正常）、WARN（4xx）、ERROR（5xx/异常）
+ * 注册：WebMvcConfig 中注册，拦截 /api/**，排除 /api/auth/**
+ */
 @Component
 public class RequestLoggingInterceptor implements HandlerInterceptor {
 

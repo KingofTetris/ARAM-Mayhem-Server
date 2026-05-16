@@ -17,6 +17,13 @@ import org.springframework.util.StringUtils;
 
 import java.util.List;
 
+/**
+ * 英雄服务实现类
+ *
+ * 功能：英雄列表分页查询、英雄详情获取（含缓存）
+ * 缓存：heroDetail 缓存（key = 英雄ID）
+ * 关联：HeroMapper, HeroService
+ */
 @Service
 public class HeroServiceImpl implements HeroService {
 

@@ -9,6 +9,13 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.springframework.stereotype.Component;
 
+/**
+ * Service 层日志切面
+ *
+ * 功能：AOP 拦截 com.aram.mayhem.service.impl 包下所有方法，记录入参/出参/异常
+ * 日志级别：DEBUG（正常）、WARN（参数/状态异常）、ERROR（未知异常）
+ * 关联：WebMvcConfig（仅拦截 Controller 层，本切面拦截 Service 层）
+ */
 @Aspect
 @Component
 public class ServiceLoggingAspect {

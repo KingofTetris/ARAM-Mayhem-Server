@@ -10,6 +10,18 @@ import javax.crypto.SecretKey;
 import java.util.Base64;
 import java.util.Date;
 
+/**
+ * JWT 令牌生成与校验工具
+ *  
+ * 功能：
+ * - 生成 Access Token（含 type=access claim，短期有效）
+ * - 生成 Refresh Token（含 type=refresh claim，长期有效）
+ * - 解析 Token 获取 userId、email、type
+ * - 校验 Token 签名和有效期
+ *
+ * 配置项：jwt.secret, jwt.access-token-expiration, jwt.refresh-token-expiration
+ * 安全：HMAC-SHA 签名，密钥 Base64 编码
+ */
 @Component
 public class JwtTokenProvider {
 

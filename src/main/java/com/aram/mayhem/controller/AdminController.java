@@ -16,6 +16,14 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 
+/**
+ * 管理后台控制器
+ *
+ * 路径前缀：/api/admin
+ * 权限：仅管理员（@PreAuthorize hasRole('ADMIN')）
+ * 功能：版本陷阱标记管理（英雄/符文的版本陷阱标记与取消）
+ * 关联：HeroMapper, AugmentMapper, TrapMarkRequest
+ */
 @Tag(name = "Admin", description = "管理后台接口（需管理员权限）")
 @RestController
 @RequestMapping("/api/admin")

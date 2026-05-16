@@ -14,6 +14,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+/**
+ * 认证服务
+ *
+ * 功能：用户注册、用户登录、令牌刷新
+ * 关联：UserMapper, JwtTokenProvider, PasswordEncoder
+ * 安全：密码使用 BCrypt 加密，JWT Token 区分 access/refresh 类型
+ */
 @Service
 public class AuthService {
 

@@ -16,7 +16,15 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/auth")
-@Tag(name = "Auth", description = "Authentication APIs")
+/**
+ * 认证控制器
+ *
+ * 路径前缀：/api/auth
+ * 权限：公开访问（登录/注册/刷新令牌无需认证）
+ * 功能：用户注册、用户登录、令牌刷新
+ * 关联：AuthService, LoginRequest, RegisterRequest, RefreshTokenRequest, AuthResponse
+ */
+@Tag(name = "Auth", description = "认证接口")
 public class AuthController {
 
     private final AuthService authService;

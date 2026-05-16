@@ -11,6 +11,14 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * 投票控制器
+ *
+ * 路径前缀：/api/strategies/{id}/vote
+ * 权限：需登录
+ * 功能：对攻略进行点赞/踩投票
+ * 关联：StrategyService, VoteRequest
+ */
 @Tag(name = "投票", description = "玩法投票接口")
 @RestController
 @RequestMapping("/api/strategies/{strategyId}/vote")

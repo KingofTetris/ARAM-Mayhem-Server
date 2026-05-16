@@ -16,6 +16,12 @@ import org.springframework.util.StringUtils;
 
 import java.util.List;
 
+/**
+ * 公告服务实现类
+ *
+ * 功能：公告列表分页查询、最新公告获取、公告详情查看
+ * 关联：BulletinMapper, BulletinService
+ */
 @Service
 public class BulletinServiceImpl implements BulletinService {
 

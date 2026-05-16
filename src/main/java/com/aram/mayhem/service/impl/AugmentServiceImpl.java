@@ -31,6 +31,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * 强化符文服务实现类
+ *
+ * 功能：符文列表查询、符文详情、套装进度计算、智能推荐算法
+ * 关联：AugmentMapper, HeroMapper, AugmentService
+ * 算法：推荐评分 = 胜率权重 + 套装协同权重 - 陷阱惩罚
+ */
 @Service
 public class AugmentServiceImpl implements AugmentService {
 

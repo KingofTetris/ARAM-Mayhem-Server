@@ -16,7 +16,15 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Tag(name = "玩法", description = "玩法查询与发布接口")
+/**
+ * 攻略控制器
+ *
+ * 路径前缀：/api/strategies
+ * 权限：列表/详情公开访问，创建需登录
+ * 功能：攻略列表分页查询、攻略详情、创建攻略
+ * 关联：StrategyService, StrategyListVO, StrategyDetailVO, CreateStrategyRequest
+ */
+@Tag(name = "Strategy", description = "攻略管理接口")
 @RestController
 @RequestMapping("/api/strategies")
 public class StrategyController {

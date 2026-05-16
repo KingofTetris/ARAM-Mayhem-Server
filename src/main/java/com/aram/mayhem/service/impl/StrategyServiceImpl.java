@@ -17,6 +17,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * 攻略服务实现类
+ *
+ * 功能：攻略CRUD、投票管理（点赞/踩/取消）
+ * 关联：StrategyMapper, StrategyAugmentMapper, StrategyItemMapper, VoteMapper, AugmentMapper, UserMapper
+ * 事务：创建攻略需同时写入攻略主体+符文关联+装备关联
+ */
 @Service
 public class StrategyServiceImpl implements StrategyService {
 

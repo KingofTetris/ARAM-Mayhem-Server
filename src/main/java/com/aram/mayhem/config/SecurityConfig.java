@@ -13,6 +13,17 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+/**
+ * Spring Security 安全配置
+ *
+ * 功能：
+ * - 无状态会话（STATELESS），基于 JWT 认证
+ * - 公开路径：/api/auth/**, /api/bulletins/**, Swagger, Actuator
+ * - 其他路径需认证
+ * - 密码编码器：BCrypt
+ * - JWT 过滤器位于 UsernamePasswordAuthenticationFilter 之前
+ * 关联：JwtAuthenticationFilter
+ */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity

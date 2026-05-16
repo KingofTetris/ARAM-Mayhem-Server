@@ -13,6 +13,14 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
+/**
+ * Redis 配置
+ *
+ * 功能：
+ * - RedisTemplate：Key 用 String 序列化，Value 用 JSON 序列化（支持 Java 8 时间类型）
+ * - StringRedisTemplate：纯字符串操作
+ * 用途：英雄详情缓存、API 响应缓存
+ */
 @Configuration
 public class RedisConfig {
 

@@ -11,6 +11,13 @@ import org.springframework.stereotype.Service;
 
 import java.util.Collections;
 
+/**
+ * 自定义用户详情服务
+ *
+ * 功能：根据 email 从数据库加载用户，转换为 Spring Security UserDetails
+ * 权限格式：ROLE_{user.role}（如 ROLE_USER, ROLE_ADMIN）
+ * 关联：UserMapper
+ */
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
 

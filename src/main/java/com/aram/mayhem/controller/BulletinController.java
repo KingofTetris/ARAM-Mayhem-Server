@@ -12,6 +12,14 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * 公告控制器
+ *
+ * 路径前缀：/api/bulletins
+ * 权限：公开访问（SecurityConfig 配置 permitAll）
+ * 功能：公告列表分页查询、最新公告获取、公告详情查看
+ * 关联：BulletinService, BulletinListVO, BulletinDetailVO
+ */
 @Tag(name = "Bulletin", description = "公告管理接口")
 @RestController
 @RequestMapping("/api/bulletins")

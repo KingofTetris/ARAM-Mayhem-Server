@@ -10,6 +10,14 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * 英雄管理控制器
+ *
+ * 路径前缀：/api/heroes
+ * 权限：公开访问
+ * 功能：英雄列表分页查询、英雄详情查看
+ * 关联：HeroService, HeroListVO, HeroDetailVO
+ */
 @Tag(name = "Hero", description = "英雄管理接口")
 @RestController
 @RequestMapping("/api/heroes")

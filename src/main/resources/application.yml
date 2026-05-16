@@ -1,55 +1,55 @@
 server:
-  port: 8080
+  port: 8080  # 服务器监听端口
 
 spring:
   application:
-    name: aram-server
+    name: aram-server  # 应用名称，用于服务注册和日志标识
   profiles:
-    active: local
+    active: local  # 激活的配置环境（local/dev/prod）
 
   datasource:
-    url: jdbc:mysql://127.0.0.1:3306/aram_mayhem?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
-    username: root
-    password: root
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/aram_mayhem?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true  # 数据库连接地址
+    username: root  # 数据库用户名（本地开发用，生产环境应使用环境变量）
+    password: root  # 数据库密码（本地开发用，生产环境应使用环境变量）
+    driver-class-name: com.mysql.cj.jdbc.Driver  # MySQL JDBC 驱动类
     hikari:
-      minimum-idle: 5
-      maximum-pool-size: 20
-      idle-timeout: 300000
-      max-lifetime: 1200000
-      connection-timeout: 30000
+      minimum-idle: 5  # 最小空闲连接数
+      maximum-pool-size: 20  # 最大连接池大小
+      idle-timeout: 300000  # 空闲连接超时时间（毫秒）
+      max-lifetime: 1200000  # 连接最大生命周期（毫秒）
+      connection-timeout: 30000  # 获取连接超时时间（毫秒）
 
   data:
     redis:
-      host: 127.0.0.1
-      port: 6379
-      timeout: 3000ms
+      host: 127.0.0.1  # Redis 服务器地址
+      port: 6379  # Redis 端口
+      timeout: 3000ms  # 连接超时时间
       lettuce:
         pool:
-          max-active: 8
-          max-idle: 8
-          min-idle: 0
+          max-active: 8  # 最大活跃连接数
+          max-idle: 8  # 最大空闲连接数
+          min-idle: 0  # 最小空闲连接数
 
 mybatis-plus:
-  mapper-locations: classpath*:/mapper/**/*.xml
-  type-aliases-package: com.aram.mayhem.entity
+  mapper-locations: classpath*:/mapper/**/*.xml  # Mapper XML 文件路径
+  type-aliases-package: com.aram.mayhem.entity  # 实体类别名包路径
   configuration:
-    map-underscore-to-camel-case: true
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    map-underscore-to-camel-case: true  # 开启下划线转驼峰命名映射
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl  # SQL 日志输出实现（本地开发用）
   global-config:
     db-config:
-      id-type: auto
-      logic-delete-field: deleted
-      logic-delete-value: 1
-      logic-not-delete-value: 0
+      id-type: auto  # 主键自增
+      logic-delete-field: deleted  # 逻辑删除字段名
+      logic-delete-value: 1  # 逻辑删除值（已删除）
+      logic-not-delete-value: 0  # 逻辑未删除值
 
 jwt:
-  secret: YXJhbS1tYXloZW0tand0LXNlY3JldC1rZXktMjAyNC1wcm9kLXVzZS1sb25nLXNlY3JldA==
-  access-token-expiration: 900000
-  refresh-token-expiration: 604800000
+  secret: YXJhbS1tYXloZW0tand0LXNlY3JldC1rZXktMjAyNC1wcm9kLXVzZS1sb25nLXNlY3JldA==  # JWT 签名密钥（Base64 编码）
+  access-token-expiration: 900000  # Access Token 有效期（毫秒），15分钟
+  refresh-token-expiration: 604800000  # Refresh Token 有效期（毫秒），7天
 
 springdoc:
   api-docs:
-    path: /v3/api-docs
+    path: /v3/api-docs  # OpenAPI 3.0 文档路径
   swagger-ui:
-    path: /swagger-ui.html
+    path: /swagger-ui.html  # Swagger UI 页面路径

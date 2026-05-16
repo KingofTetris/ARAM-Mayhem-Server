@@ -14,6 +14,14 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
+/**
+ * JWT 认证过滤器
+ *
+ * 功能：从请求头 Authorization 提取 Bearer Token，校验后设置 SecurityContext
+ * 执行顺序：UsernamePasswordAuthenticationFilter 之前
+ * 流程：提取 Token → 校验签名 → 获取 email → 加载 UserDetails → 设置认证上下文
+ * 异常处理：Token 无效或用户不存在时清除认证上下文，继续过滤链
+ */
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
