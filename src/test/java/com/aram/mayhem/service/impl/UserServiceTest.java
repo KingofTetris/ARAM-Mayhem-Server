@@ -213,7 +213,7 @@ class UserServiceTest {
                     .hasMessageContaining("User not found");
 
             verify(userMapper).selectById(999L);
-            verify(userMapper, never()).updateById(any());
+            verify(userMapper, never()).updateById(any(User.class));
         }
 
         @Test
