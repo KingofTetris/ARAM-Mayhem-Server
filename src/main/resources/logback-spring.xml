@@ -1,12 +1,40 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Logback 日志配置文件
+  ====================
+  
+  功能：配置后端服务的日志输出策略
+  环境：支持 local（本地开发）和 prod（生产环境）两种 profile
+  
+  日志输出目标：
+  1. CONSOLE - 控制台输出（仅 local 环境）
+  2. FILE_APP - 应用日志文件（包含所有级别日志）
+  3. FILE_ERROR - 错误日志文件（仅 ERROR 级别）
+  
+  日志滚动策略：
+  - 按文件大小滚动（50MB/文件）
+  - 按时间滚动（按天归档）
+  - 保留最近 30 天日志
+  - 总大小上限 1GB
+-->
 <configuration>
 
+    <!-- 日志路径配置 -->
     <property name="LOG_PATH" value="logs"/>
+    
+    <!-- 日志格式：时间戳 | 线程名 | 日志级别 | 类名 | 日志消息 -->
     <property name="LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"/>
+    
+    <!-- 单个日志文件最大大小 -->
     <property name="LOG_FILE_MAX_SIZE" value="50MB"/>
+    
+    <!-- 日志文件保留天数 -->
     <property name="LOG_FILE_MAX_HISTORY" value="30"/>
+    
+    <!-- 日志文件总大小上限 -->
     <property name="LOG_FILE_TOTAL_SIZE_CAP" value="1GB"/>
 
+    <!-- ==================== 控制台输出 Appender ==================== -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>${LOG_PATTERN}</pattern>
@@ -14,12 +42,15 @@
         </encoder>
     </appender>
 
+    <!-- ==================== 应用日志文件 Appender ==================== -->
     <appender name="FILE_APP" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <!-- 主日志文件路径 -->
         <file>${LOG_PATH}/aram-server.log</file>
         <encoder>
             <pattern>${LOG_PATTERN}</pattern>
             <charset>UTF-8</charset>
         </encoder>
+        <!-- 滚动策略：按大小+时间混合滚动 -->
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <fileNamePattern>${LOG_PATH}/aram-server.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
             <maxFileSize>${LOG_FILE_MAX_SIZE}</maxFileSize>
@@ -28,8 +59,11 @@
         </rollingPolicy>
     </appender>
 
+    <!-- ==================== 错误日志文件 Appender ==================== -->
     <appender name="FILE_ERROR" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <!-- 错误日志文件路径 -->
         <file>${LOG_PATH}/aram-server-error.log</file>
+        <!-- 过滤器：仅保留 ERROR 级别日志 -->
         <filter class="ch.qos.logback.classic.filter.LevelFilter">
             <level>ERROR</level>
             <onMatch>ACCEPT</onMatch>
@@ -39,6 +73,7 @@
             <pattern>${LOG_PATTERN}</pattern>
             <charset>UTF-8</charset>
         </encoder>
+        <!-- 滚动策略：与应用日志一致 -->
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <fileNamePattern>${LOG_PATH}/aram-server-error.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
             <maxFileSize>${LOG_FILE_MAX_SIZE}</maxFileSize>
@@ -47,17 +82,26 @@
         </rollingPolicy>
     </appender>
 
+    <!-- ==================== 包级别日志配置 ==================== -->
+    
+    <!-- 应用自身代码：INFO 级别 -->
     <logger name="com.aram.mayhem" level="INFO"/>
 
+    <!-- Spring 框架日志级别配置 -->
     <logger name="org.springframework.web" level="INFO"/>
     <logger name="org.springframework.security" level="INFO"/>
     <logger name="org.springframework.data.redis" level="WARN"/>
 
+    <!-- MyBatis 日志级别配置（仅显示警告及以上） -->
     <logger name="com.baomidou.mybatisplus" level="WARN"/>
     <logger name="org.apache.ibatis" level="WARN"/>
 
+    <!-- 参数校验框架日志级别 -->
     <logger name="org.hibernate.validator" level="WARN"/>
 
+    <!-- ==================== 环境特定配置 ==================== -->
+    
+    <!-- 本地开发环境：输出到控制台 + 文件 -->
     <springProfile name="local">
         <root level="INFO">
             <appender-ref ref="CONSOLE"/>
@@ -66,11 +110,13 @@
         </root>
     </springProfile>
 
+    <!-- 生产环境：仅输出到文件，减少日志量 -->
     <springProfile name="prod">
         <root level="WARN">
             <appender-ref ref="FILE_APP"/>
             <appender-ref ref="FILE_ERROR"/>
         </root>
+        <!-- 应用自身代码保持 INFO 级别，便于问题排查 -->
         <logger name="com.aram.mayhem" level="INFO"/>
     </springProfile>
 

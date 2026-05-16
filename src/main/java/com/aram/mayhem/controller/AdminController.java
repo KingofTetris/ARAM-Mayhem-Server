@@ -40,18 +40,32 @@ public class AdminController {
         this.augmentMapper = augmentMapper;
     }
 
+    /**
+     * 标记/取消英雄版本陷阱（管理模块）
+     *
+     * 作用：管理员标记或取消英雄的版本陷阱状态
+     * 版本陷阱：当前版本中表现较差的英雄，标记后前端会显示红色警告横幅
+     * 权限：仅管理员可操作（@PreAuthorize hasRole('ADMIN')）
+     *
+     * @param id      英雄ID
+     * @param request 陷阱标记请求体（isVersionTrap: true-标记为陷阱，false-取消标记）
+     * @return Result<Void> 操作成功返回空数据，失败返回错误信息
+     */
     @Operation(summary = "标记/取消英雄版本陷阱", description = "管理员标记英雄为版本陷阱，标记后前端显示红色警告横幅")
     @PutMapping("/heroes/{id}/trap-mark")
     public Result<Void> markHeroTrap(
             @PathVariable Long id,
             @RequestBody TrapMarkRequest request) {
+        // 记录管理员操作日志
         log.info("Admin marking hero trap: heroId={}, isVersionTrap={}", id, request.getIsVersionTrap());
 
+        // 查询英雄是否存在
         Hero hero = heroMapper.selectById(id);
         if (hero == null) {
             return Result.error(404, "Hero not found with id: " + id);
         }
 
+        // 更新陷阱标记状态和标记时间
         hero.setIsVersionTrap(request.getIsVersionTrap());
         hero.setVersionTrapSince(request.getIsVersionTrap() ? LocalDateTime.now() : null);
         heroMapper.updateById(hero);
@@ -60,18 +74,32 @@ public class AdminController {
         return Result.success();
     }
 
+    /**
+     * 标记/取消强化符文版本陷阱（管理模块）
+     *
+     * 作用：管理员标记或取消强化符文的版本陷阱状态
+     * 版本陷阱：当前版本中表现较差的符文，标记后前端会显示红色警告横幅
+     * 权限：仅管理员可操作（@PreAuthorize hasRole('ADMIN')）
+     *
+     * @param id      强化符文ID
+     * @param request 陷阱标记请求体（isVersionTrap: true-标记为陷阱，false-取消标记）
+     * @return Result<Void> 操作成功返回空数据，失败返回错误信息
+     */
     @Operation(summary = "标记/取消强化符文版本陷阱", description = "管理员标记强化符文为版本陷阱")
     @PutMapping("/augments/{id}/trap-mark")
     public Result<Void> markAugmentTrap(
             @PathVariable Long id,
             @RequestBody TrapMarkRequest request) {
+        // 记录管理员操作日志
         log.info("Admin marking augment trap: augmentId={}, isVersionTrap={}", id, request.getIsVersionTrap());
 
+        // 查询符文是否存在
         Augment augment = augmentMapper.selectById(id);
         if (augment == null) {
             return Result.error(404, "Augment not found with id: " + id);
         }
 
+        // 更新陷阱标记状态和标记时间
         augment.setIsVersionTrap(request.getIsVersionTrap());
         augment.setVersionTrapSince(request.getIsVersionTrap() ? LocalDateTime.now() : null);
         augmentMapper.updateById(augment);

@@ -75,6 +75,19 @@ public class AugmentServiceImpl implements AugmentService {
         this.redisTemplate = redisTemplate;
     }
 
+    /**
+     * 获取符文列表（符文模块）
+     *
+     * 作用：分页查询强化符文列表，支持按品质和套装筛选
+     * 品质类型：prismatic(棱彩)/legendary(金色)/epic(史诗)/silver(银色)
+     * 排序：按胜率降序
+     *
+     * @param page        页码（从1开始）
+     * @param size        每页数量
+     * @param quality     品质筛选（可选）
+     * @param synergySet  套装筛选（可选）
+     * @return PageResult<AugmentListVO> 分页符文列表
+     */
     @Override
     public PageResult<AugmentListVO> getAugmentList(int page, int size, String quality, String synergySet) {
         String cacheKey = CACHE_KEY_PREFIX + quality + ":" + synergySet + ":" + page + ":" + size;
@@ -82,9 +95,11 @@ public class AugmentServiceImpl implements AugmentService {
         Page<Augment> pageParam = new Page<>(page, size);
         LambdaQueryWrapper<Augment> wrapper = new LambdaQueryWrapper<>();
 
+        // 品质筛选
         if (quality != null && !quality.isEmpty()) {
             wrapper.eq(Augment::getQuality, quality);
         }
+        // 套装筛选（支持多个套装字段）
         if (synergySet != null && !synergySet.isEmpty()) {
             wrapper.and(w -> w
                     .eq(Augment::getSynergySet, synergySet)
@@ -95,9 +110,11 @@ public class AugmentServiceImpl implements AugmentService {
             );
         }
 
+        // 按胜率降序排序
         wrapper.orderByDesc(Augment::getWinRate);
         Page<Augment> result = augmentMapper.selectPage(pageParam, wrapper);
 
+        // 转换为VO
         List<AugmentListVO> voList = result.getRecords().stream()
                 .map(this::convertToListVO)
                 .collect(Collectors.toList());
@@ -105,6 +122,14 @@ public class AugmentServiceImpl implements AugmentService {
         return new PageResult<>(result.getTotal(), (int) result.getCurrent(), (int) result.getSize(), voList);
     }
 
+    /**
+     * 获取符文详情（符文模块）
+     *
+     * 作用：根据符文ID获取详细信息，包括效果描述、品质、套装属性等
+     *
+     * @param id 符文ID
+     * @return AugmentVO 符文详情，不存在返回null
+     */
     @Override
     public AugmentVO getAugmentDetail(Long id) {
         Augment augment = augmentMapper.selectById(id);
@@ -114,12 +139,23 @@ public class AugmentServiceImpl implements AugmentService {
         return convertToVO(augment);
     }
 
+    /**
+     * 获取套装进度（符文模块）
+     *
+     * 作用：根据已选符文ID列表，计算并返回各套装的激活进度
+     * 套装类型：shield(护盾)/regeneration(再生)/shield-break(破盾)等
+     *
+     * @param augmentIds 已选符文ID列表（逗号分隔）
+     * @return List<SynergyProgressResponse> 各套装进度列表
+     */
     @Override
     public List<SynergyProgressResponse> getSynergyProgress(String augmentIds) {
+        // 参数校验：空输入返回空进度
         if (augmentIds == null || augmentIds.isEmpty()) {
             return buildEmptyProgress();
         }
 
+        // 解析ID列表
         List<Long> ids = Arrays.stream(augmentIds.split(","))
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
@@ -130,47 +166,66 @@ public class AugmentServiceImpl implements AugmentService {
             return buildEmptyProgress();
         }
 
+        // 批量查询符文
         List<Augment> augments = augmentMapper.selectBatchIds(ids);
 
+        // 按套装分组
         Map<String, List<Augment>> synergyMap = new HashMap<>();
         for (String synergy : ALL_SYNERGIES) {
             synergyMap.put(synergy, new ArrayList<>());
         }
 
+        // 填充套装映射（支持符文的多个套装属性）
         for (Augment augment : augments) {
             addToSynergyMap(synergyMap, augment.getSynergySet(), augment);
             addToSynergyMap(synergyMap, augment.getSynergySet2(), augment);
             addToSynergyMap(synergyMap, augment.getSynergySet3(), augment);
         }
 
+        // 构建进度响应并排序
         return synergyMap.entrySet().stream()
                 .map(entry -> buildSynergyProgress(entry.getKey(), entry.getValue()))
                 .sorted(Comparator.comparing(SynergyProgressResponse::getSynergyName))
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 获取符文推荐（符文模块）
+     *
+     * 作用：根据用户选择的英雄和已选符文，智能推荐合适的强化符文
+     * 推荐算法：胜率权重 + 套装协同权重 + 品质加成 - 陷阱惩罚
+     * 排除规则：不推荐已选择的符文和陷阱符文
+     *
+     * @param request 推荐请求体（英雄ID、已选符文ID列表）
+     * @return List<AugmentRecommendResponse> 符文推荐列表（按评分降序）
+     */
     @Override
     public List<AugmentRecommendResponse> getRecommendations(AugmentRecommendRequest request) {
         log.info("Getting augment recommendations: heroId={}, selectedAugments={}", request.getHeroId(), request.getSelectedAugmentIds());
 
+        // 查询英雄信息
         Hero hero = heroMapper.selectById(request.getHeroId());
         if (hero == null) {
             log.warn("Hero not found for recommendations: heroId={}", request.getHeroId());
             return new ArrayList<>();
         }
 
+        // 已选符文ID集合（用于排除）
         Set<Long> excludeIds = new HashSet<>(request.getSelectedAugmentIds());
 
+        // 查询候选符文（排除已选和陷阱符文）
         LambdaQueryWrapper<Augment> wrapper = new LambdaQueryWrapper<>();
         wrapper.notIn(!excludeIds.isEmpty(), Augment::getId, excludeIds);
         wrapper.eq(Augment::getIsTrap, false);
         wrapper.orderByDesc(Augment::getWinRate);
 
+        // 限制查询数量（取前20个候选）
         Page<Augment> page = new Page<>(1, 20);
         Page<Augment> result = augmentMapper.selectPage(page, wrapper);
 
         String heroRole = hero.getRole();
 
+        // 转换为推荐响应并按评分排序
         return result.getRecords().stream()
                 .map(augment -> convertToRecommendResponse(augment, heroRole, request.getSelectedAugmentIds()))
                 .sorted(Comparator.comparingDouble(AugmentRecommendResponse::getScore).reversed())

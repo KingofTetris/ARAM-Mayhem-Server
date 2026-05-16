@@ -31,10 +31,16 @@ class VoteControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    private VoteRequest createVoteRequest(String voteType) {
+        VoteRequest request = new VoteRequest();
+        request.setVoteType(voteType);
+        return request;
+    }
+
     @Test
     @DisplayName("POST /api/strategies/{id}/vote - 未登录无法投票")
     void vote_unauthorized() throws Exception {
-        VoteRequest request = new VoteRequest("UP");
+        VoteRequest request = createVoteRequest("UP");
 
         mockMvc.perform(post("/api/strategies/1/vote")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -49,7 +55,7 @@ class VoteControllerTest {
     void vote_up_success() throws Exception {
         doNothing().when(strategyService).vote(eq(1L), eq(1L), eq("UP"));
 
-        VoteRequest request = new VoteRequest("UP");
+        VoteRequest request = createVoteRequest("UP");
 
         mockMvc.perform(post("/api/strategies/1/vote")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -67,7 +73,7 @@ class VoteControllerTest {
     void vote_down_success() throws Exception {
         doNothing().when(strategyService).vote(eq(1L), eq(1L), eq("DOWN"));
 
-        VoteRequest request = new VoteRequest("DOWN");
+        VoteRequest request = createVoteRequest("DOWN");
 
         mockMvc.perform(post("/api/strategies/1/vote")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -85,7 +91,7 @@ class VoteControllerTest {
     void vote_strategyNotFound() throws Exception {
         doThrow(new IllegalStateException("玩法不存在")).when(strategyService).vote(eq(999L), eq(1L), eq("UP"));
 
-        VoteRequest request = new VoteRequest("UP");
+        VoteRequest request = createVoteRequest("UP");
 
         mockMvc.perform(post("/api/strategies/999/vote")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -102,7 +108,7 @@ class VoteControllerTest {
     void vote_alreadyVoted() throws Exception {
         doThrow(new IllegalStateException("您已经投过票了")).when(strategyService).vote(eq(1L), eq(1L), eq("UP"));
 
-        VoteRequest request = new VoteRequest("UP");
+        VoteRequest request = createVoteRequest("UP");
 
         mockMvc.perform(post("/api/strategies/1/vote")
                         .contentType(MediaType.APPLICATION_JSON)

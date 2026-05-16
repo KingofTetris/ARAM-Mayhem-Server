@@ -6,6 +6,12 @@ import lombok.Data;
 
 import java.util.List;
 
+/**
+ * 强化符文推荐请求对象
+ *
+ * 数据流向：前端符文推荐页 → AugmentController → AugmentService
+ * 用途：基于英雄和已选符文，请求智能推荐下一个符文
+ */
 @Data
 @Schema(description = "强化符文推荐请求")
 public class AugmentRecommendRequest {

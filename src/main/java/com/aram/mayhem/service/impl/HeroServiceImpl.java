@@ -35,10 +35,26 @@ public class HeroServiceImpl implements HeroService {
         this.heroMapper = heroMapper;
     }
 
+    /**
+     * 获取英雄列表（英雄模块）
+     *
+     * 作用：分页查询英雄列表，支持关键词搜索、梯级筛选和多种排序方式
+     * 梯级等级：S+/S/A/B/C（从强到弱）
+     * 排序字段：winRate(胜率)/pickRate(选取率)/tier(梯级)/name(名称)
+     * 搜索范围：英文名、中文名、称号
+     *
+     * @param page    页码（从1开始）
+     * @param size    每页数量
+     * @param keyword 搜索关键词（匹配英文名/中文名/称号）
+     * @param tier    梯级筛选（S+/S/A/B/C）
+     * @param sortBy  排序字段
+     * @return PageResult<HeroListVO> 分页英雄列表
+     */
     @Override
     public PageResult<HeroListVO> getHeroList(int page, int size, String keyword, String tier, String sortBy) {
         LambdaQueryWrapper<Hero> queryWrapper = new LambdaQueryWrapper<>();
 
+        // 关键词搜索（支持英文名、中文名、称号）
         if (StringUtils.hasText(keyword)) {
             queryWrapper.and(wrapper -> wrapper
                     .like(Hero::getNameEn, keyword)
@@ -48,10 +64,12 @@ public class HeroServiceImpl implements HeroService {
                     .like(Hero::getTitle, keyword));
         }
 
+        // 梯级筛选
         if (StringUtils.hasText(tier)) {
             queryWrapper.eq(Hero::getTier, tier);
         }
 
+        // 排序逻辑
         if (StringUtils.hasText(sortBy)) {
             switch (sortBy) {
                 case "winRate" -> queryWrapper.orderByDesc(Hero::getWinRate);
@@ -67,6 +85,7 @@ public class HeroServiceImpl implements HeroService {
         Page<Hero> heroPage = new Page<>(page, size);
         Page<Hero> result = heroMapper.selectPage(heroPage, queryWrapper);
 
+        // 转换为VO
         List<HeroListVO> records = result.getRecords().stream()
                 .map(this::convertToListVO)
                 .toList();
@@ -74,6 +93,16 @@ public class HeroServiceImpl implements HeroService {
         return new PageResult<>(result.getTotal(), (int) result.getCurrent(), (int) result.getSize(), records);
     }
 
+    /**
+     * 获取英雄详情（英雄模块）
+     *
+     * 作用：根据英雄ID获取详细信息，包括技能、属性、克制关系、推荐出装等
+     * 缓存：使用@Cacheable缓存，key为英雄ID
+     *
+     * @param id 英雄ID
+     * @return HeroDetailVO 英雄详情
+     * @throws BusinessException 英雄不存在时抛出404错误
+     */
     @Override
     @Cacheable(value = "heroDetail", key = "#id", unless = "#result == null")
     public HeroDetailVO getHeroDetail(Long id) {
