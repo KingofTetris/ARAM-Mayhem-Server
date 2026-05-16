@@ -147,6 +147,7 @@ public class HeroServiceImpl implements HeroService {
         vo.setAvgDeaths(hero.getAvgDeaths());
         vo.setAvgAssists(hero.getAvgAssists());
         vo.setRecommendedBuild(hero.getRecommendedBuild());
+        vo.setRecommendedAugmentIds(hero.getRecommendedAugmentIds() != null ? hero.getRecommendedAugmentIds() : List.of());
 
         if (hero.getSkills() != null) {
             List<HeroDetailVO.SkillInfo> skillInfos = hero.getSkills().stream()

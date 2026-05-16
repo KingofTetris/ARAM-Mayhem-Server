@@ -75,4 +75,16 @@ public interface StrategyService {
      * @param userId     用户ID
      */
     void cancelVote(Long strategyId, Long userId);
+
+    /**
+     * 删除攻略
+     *
+     * 作用：删除指定攻略及其关联数据（符文关联、装备关联、投票记录）
+     * 权限：仅攻略作者可删除
+     *
+     * @param strategyId 攻略ID
+     * @param userId     当前用户ID（用于权限校验）
+     * @throws IllegalArgumentException 攻略不存在或无权删除时抛出
+     */
+    void deleteStrategy(Long strategyId, Long userId);
 }

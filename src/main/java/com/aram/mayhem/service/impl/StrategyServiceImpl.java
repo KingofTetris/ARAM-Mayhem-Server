@@ -316,6 +316,41 @@ public class StrategyServiceImpl implements StrategyService {
         voteMapper.delete(wrapper);
     }
 
+    /**
+     * 删除攻略（社区模块）
+     *
+     * 作用：删除攻略主体及关联数据（符文关联、装备关联、投票记录）
+     * 权限校验：仅攻略作者可删除
+     * 事务：确保关联数据一并清除
+     *
+     * @param strategyId 攻略ID
+     * @param userId     当前用户ID（用于权限校验）
+     * @throws IllegalArgumentException 攻略不存在或无权删除时抛出
+     */
+    @Override
+    @Transactional
+    public void deleteStrategy(Long strategyId, Long userId) {
+        log.info("Deleting strategy: strategyId={}, userId={}", strategyId, userId);
+
+        Strategy strategy = strategyMapper.selectById(strategyId);
+        if (strategy == null) {
+            throw new IllegalArgumentException("攻略不存在");
+        }
+        if (!strategy.getUserId().equals(userId)) {
+            throw new IllegalArgumentException("无权删除他人的攻略");
+        }
+
+        strategyAugmentMapper.delete(new LambdaQueryWrapper<StrategyAugment>()
+                .eq(StrategyAugment::getStrategyId, strategyId));
+        strategyItemMapper.delete(new LambdaQueryWrapper<StrategyItem>()
+                .eq(StrategyItem::getStrategyId, strategyId));
+        voteMapper.delete(new LambdaQueryWrapper<Vote>()
+                .eq(Vote::getStrategyId, strategyId));
+        strategyMapper.deleteById(strategyId);
+
+        log.info("Strategy deleted: strategyId={}", strategyId);
+    }
+
     private StrategyListVO convertToListVO(Strategy strategy) {
         StrategyListVO vo = new StrategyListVO();
         vo.setId(strategy.getId());

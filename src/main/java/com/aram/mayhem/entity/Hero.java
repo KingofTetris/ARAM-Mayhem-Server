@@ -79,6 +79,10 @@ public class Hero {
     /** 推荐出装（JSON 格式存储） */
     private String recommendedBuild;
 
+    /** 推荐强化符文ID列表（JSON 格式存储） */
+    @TableField(typeHandler = JacksonTypeHandler.class)
+    private List<Long> recommendedAugmentIds;
+
     /** 数据版本号（如 14.8） */
     private String version;
 

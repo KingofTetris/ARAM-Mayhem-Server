@@ -128,15 +128,38 @@ public class StrategyController {
     @Operation(summary = "获取我的投稿")
     @GetMapping("/my")
     public Result<List<StrategyListVO>> getMyStrategies() {
-        // 获取当前登录用户ID
         Long userId = getCurrentUserId();
         if (userId == null) {
             return Result.error(401, "请先登录");
         }
 
-        // 调用Service层获取用户攻略
         List<StrategyListVO> strategies = strategyService.getUserStrategies(userId);
         return Result.success(strategies);
+    }
+
+    /**
+     * 删除攻略（社区模块）
+     *
+     * 作用：删除指定攻略及其关联数据（符文、装备、投票）
+     * 权限：需要登录，仅攻略作者可删除
+     *
+     * @param id 攻略ID
+     * @return Result<Void> 删除结果
+     */
+    @Operation(summary = "删除攻略", description = "需要登录，仅作者可删除")
+    @DeleteMapping("/{id}")
+    public Result<Void> deleteStrategy(@Parameter(description = "攻略ID") @PathVariable Long id) {
+        Long userId = getCurrentUserId();
+        if (userId == null) {
+            return Result.error(401, "请先登录");
+        }
+
+        try {
+            strategyService.deleteStrategy(id, userId);
+            return Result.success(null);
+        } catch (IllegalArgumentException e) {
+            return Result.error(403, e.getMessage());
+        }
     }
 
     /**
