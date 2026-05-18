@@ -2,11 +2,14 @@ package com.aram.mayhem.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.aram.mayhem.dto.AugmentBriefVO;
 import com.aram.mayhem.dto.HeroDetailVO;
 import com.aram.mayhem.dto.HeroListVO;
 import com.aram.mayhem.dto.PageResult;
+import com.aram.mayhem.entity.Augment;
 import com.aram.mayhem.entity.Hero;
 import com.aram.mayhem.common.BusinessException;
+import com.aram.mayhem.mapper.AugmentMapper;
 import com.aram.mayhem.mapper.HeroMapper;
 import com.aram.mayhem.service.HeroService;
 import org.slf4j.Logger;
@@ -15,7 +18,10 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 英雄服务实现类
@@ -30,9 +36,11 @@ public class HeroServiceImpl implements HeroService {
     private static final Logger log = LoggerFactory.getLogger(HeroServiceImpl.class);
 
     private final HeroMapper heroMapper;
+    private final AugmentMapper augmentMapper;
 
-    public HeroServiceImpl(HeroMapper heroMapper) {
+    public HeroServiceImpl(HeroMapper heroMapper, AugmentMapper augmentMapper) {
         this.heroMapper = heroMapper;
+        this.augmentMapper = augmentMapper;
     }
 
     /**
@@ -147,7 +155,8 @@ public class HeroServiceImpl implements HeroService {
         vo.setAvgDeaths(hero.getAvgDeaths());
         vo.setAvgAssists(hero.getAvgAssists());
         vo.setRecommendedBuild(hero.getRecommendedBuild());
-        vo.setRecommendedAugmentIds(hero.getRecommendedAugmentIds() != null ? hero.getRecommendedAugmentIds() : List.of());
+
+        vo.setRecommendedAugments(resolveAugmentBriefs(hero.getRecommendedAugmentIds()));
 
         if (hero.getSkills() != null) {
             List<HeroDetailVO.SkillInfo> skillInfos = hero.getSkills().stream()
@@ -168,5 +177,32 @@ public class HeroServiceImpl implements HeroService {
         vo.setSynergies(hero.getSynergies() != null ? hero.getSynergies() : List.of());
 
         return vo;
+    }
+
+    /**
+     * 根据符文ID列表查询符文简要信息
+     *
+     * 作用：将英雄的 recommendedAugmentIds 批量查询为 AugmentBriefVO（含名称、品质、图标）
+     * 实现：使用 IN 查询批量获取，避免 N+1 问题
+     *
+     * @param augmentIds 符文ID列表
+     * @return List<AugmentBriefVO> 符文简要信息列表
+     */
+    private List<AugmentBriefVO> resolveAugmentBriefs(List<Long> augmentIds) {
+        if (augmentIds == null || augmentIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Augment> augments = augmentMapper.selectList(
+                new LambdaQueryWrapper<Augment>().in(Augment::getId, augmentIds));
+
+        Map<Long, Augment> augmentMap = augments.stream()
+                .collect(Collectors.toMap(Augment::getId, a -> a));
+
+        return augmentIds.stream()
+                .map(augmentMap::get)
+                .filter(java.util.Objects::nonNull)
+                .map(a -> new AugmentBriefVO(a.getId(), a.getNameZh(), a.getQuality(), a.getIconUrl()))
+                .toList();
     }
 }

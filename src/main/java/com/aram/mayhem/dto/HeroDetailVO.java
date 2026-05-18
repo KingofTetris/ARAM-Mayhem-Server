@@ -40,8 +40,8 @@ public class HeroDetailVO extends HeroListVO {
     /** 推荐出装 */
     private String recommendedBuild;
 
-    /** 推荐强化符文ID列表 */
-    private List<Long> recommendedAugmentIds;
+    /** 推荐强化符文列表（含名称、品质、图标） */
+    private List<AugmentBriefVO> recommendedAugments;
 
     /**
      * 技能信息
