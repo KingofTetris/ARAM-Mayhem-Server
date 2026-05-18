@@ -43,10 +43,10 @@ public class Hero {
     /** 梯级评级（S+/S/A/B/C） */
     private String tier;
 
-    /** ARAM 胜率（0~1 之间，如 0.532 表示 53.2%） */
+    /** ARAM 胜率（百分比格式，如 52.30 表示 52.30%） */
     private BigDecimal winRate;
 
-    /** ARAM 选取率（0~1 之间） */
+    /** ARAM 选取率（百分比格式，如 15.30 表示 15.30%） */
     private BigDecimal pickRate;
 
     /** 数据置信度等级（如 high/medium/low） */

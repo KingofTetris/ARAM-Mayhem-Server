@@ -46,10 +46,10 @@ public class Augment {
     /** 符文图标 URL */
     private String iconUrl;
 
-    /** ARAM 胜率（0~1 之间） */
+    /** ARAM 胜率（百分比格式，如 52.30 表示 52.30%） */
     private BigDecimal winRate;
 
-    /** ARAM 选取率（0~1 之间） */
+    /** ARAM 选取率（百分比格式，如 15.30 表示 15.30%） */
     private BigDecimal pickRate;
 
     /** 平均排名（1~8 之间，越小越好） */
