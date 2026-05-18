@@ -53,3 +53,23 @@ springdoc:
     path: /v3/api-docs  # OpenAPI 3.0 文档路径
   swagger-ui:
     path: /swagger-ui.html  # Swagger UI 页面路径
+
+datadragon:
+  base-url: https://ddragon.leagueoflegends.com  # Riot Data Dragon API 基础 URL
+  locale: zh_CN  # 数据语言区域
+  connect-timeout: 30  # 连接超时（秒）
+  read-timeout: 30  # 读取超时（秒）
+
+aramdata:
+  base-url: https://u.gg/lol/aram  # U.GG ARAM 数据源 URL
+  request-interval-ms: 2000  # 请求间隔（毫秒），防止反爬封禁
+  user-agents:  # 随机 User-Agent 列表
+    - "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    - "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+    - "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"
+
+sync:
+  cron: "0 0 */6 * * ?"  # 定时同步 cron 表达式（每 6 小时）
+  lock-key: "aram:sync:lock"  # Redis 分布式锁 Key
+  lock-ttl-minutes: 30  # 锁 TTL（分钟）
+  warmup-top-n: 50  # 缓存预热 Top N 英雄数
