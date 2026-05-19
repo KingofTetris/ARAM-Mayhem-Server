@@ -8,11 +8,13 @@ import com.aram.mayhem.entity.Hero;
 import com.aram.mayhem.mapper.AugmentMapper;
 import com.aram.mayhem.mapper.HeroMapper;
 import com.aram.mayhem.scheduler.DataSyncScheduler;
+import com.aram.mayhem.service.CacheWarmupService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -37,11 +39,17 @@ public class AdminController {
     private final HeroMapper heroMapper;
     private final AugmentMapper augmentMapper;
     private final DataSyncScheduler dataSyncScheduler;
+    private final CacheWarmupService cacheWarmupService;
 
-    public AdminController(HeroMapper heroMapper, AugmentMapper augmentMapper, DataSyncScheduler dataSyncScheduler) {
+    @Value("${sync.warmup-top-n:50}")
+    private int warmupTopN;
+
+    public AdminController(HeroMapper heroMapper, AugmentMapper augmentMapper,
+                           DataSyncScheduler dataSyncScheduler, CacheWarmupService cacheWarmupService) {
         this.heroMapper = heroMapper;
         this.augmentMapper = augmentMapper;
         this.dataSyncScheduler = dataSyncScheduler;
+        this.cacheWarmupService = cacheWarmupService;
     }
 
     /**
@@ -112,7 +120,7 @@ public class AdminController {
         return Result.success();
     }
 
-    @Operation(summary = "手动触发数据同步", description = "管理员手动触发全量数据同步（采集→聚合→验证→写入）")
+    @Operation(summary = "手动触发数据同步", description = "管理员手动触发全量数据同步（采集→聚合→验证→写入→缓存预热）")
     @PostMapping("/sync/trigger")
     public Result<SyncResult> triggerSync() {
         log.info("Admin triggered manual data sync");
@@ -122,5 +130,21 @@ public class AdminController {
         } else {
             return Result.error(500, result.getErrorMessage());
         }
+    }
+
+    @Operation(summary = "手动触发缓存预热", description = "管理员手动触发缓存预热（英雄详情+符文列表+英雄列表+清理旧缓存）")
+    @PostMapping("/cache/warmup")
+    public Result<String> triggerCacheWarmup() {
+        log.info("Admin triggered manual cache warmup");
+        var warmedHeroes = cacheWarmupService.warmupHeroCache(warmupTopN);
+        int warmedAugments = cacheWarmupService.warmupAugmentCache();
+        int warmedHeroList = cacheWarmupService.warmupHeroListCache();
+        int cleaned = cacheWarmupService.cleanupStaleCache();
+
+        String summary = String.format(
+                "HeroDetail: %d heroes warmed | AugmentList: %d augments warmed | HeroList: %d heroes warmed | StaleCleaned: %d keys",
+                warmedHeroes.size(), warmedAugments, warmedHeroList, cleaned);
+        log.info("Cache warmup completed: {}", summary);
+        return Result.success(summary);
     }
 }

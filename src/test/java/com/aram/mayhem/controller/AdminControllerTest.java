@@ -9,6 +9,7 @@ import com.aram.mayhem.mapper.AugmentMapper;
 import com.aram.mayhem.mapper.HeroMapper;
 import com.aram.mayhem.scheduler.DataSyncScheduler;
 import com.aram.mayhem.security.JwtAuthenticationFilter;
+import com.aram.mayhem.service.CacheWarmupService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -51,6 +52,9 @@ class AdminControllerTest {
 
     @MockBean
     private DataSyncScheduler dataSyncScheduler;
+
+    @MockBean
+    private CacheWarmupService cacheWarmupService;
 
     @MockBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;

@@ -5,11 +5,13 @@ import com.aram.mayhem.dto.SyncResult;
 import com.aram.mayhem.dto.ValidationResult;
 import com.aram.mayhem.entity.Augment;
 import com.aram.mayhem.entity.Hero;
+import com.aram.mayhem.service.CacheWarmupService;
 import com.aram.mayhem.service.DataAggregatorService;
 import com.aram.mayhem.service.DistributedLockService;
 import com.aram.mayhem.service.MultiSourceValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -27,6 +29,10 @@ public class DataSyncScheduler {
     private final MultiSourceValidator multiSourceValidator;
     private final DistributedLockService distributedLockService;
     private final RiotDataDragonClient riotDataDragonClient;
+    private final CacheWarmupService cacheWarmupService;
+
+    @Value("${sync.warmup-top-n:50}")
+    private int warmupTopN;
 
     @Scheduled(cron = "0 0 0/6 * * ?")
     public SyncResult syncAllData() {
@@ -55,6 +61,12 @@ public class DataSyncScheduler {
             int validationPassed = (int) heroValidations.stream().filter(ValidationResult::isPassed).count()
                     + (int) augmentValidations.stream().filter(ValidationResult::isPassed).count();
             int validationFailed = heroValidations.size() + augmentValidations.size() - validationPassed;
+
+            cacheWarmupService.warmupHeroCache(warmupTopN);
+            cacheWarmupService.warmupAugmentCache();
+            cacheWarmupService.warmupHeroListCache();
+            cacheWarmupService.cleanupStaleCache();
+            log.info("[SYNC] cache warmup completed");
 
             long durationMs = System.currentTimeMillis() - startTime;
             log.info("[SYNC] completed | heroes={} | augments={} | passed={} | failed={} | duration={}ms",
