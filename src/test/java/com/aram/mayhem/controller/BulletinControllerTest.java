@@ -4,6 +4,7 @@ import com.aram.mayhem.common.GlobalExceptionHandler;
 import com.aram.mayhem.dto.BulletinDetailVO;
 import com.aram.mayhem.dto.BulletinListVO;
 import com.aram.mayhem.dto.PageResult;
+import com.aram.mayhem.security.JwtAuthenticationFilter;
 import com.aram.mayhem.service.BulletinService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -33,6 +34,9 @@ class BulletinControllerTest {
 
     @MockBean
     private BulletinService bulletinService;
+
+    @MockBean
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Test
     @DisplayName("GET /api/bulletins - 无筛选返回公告列表")

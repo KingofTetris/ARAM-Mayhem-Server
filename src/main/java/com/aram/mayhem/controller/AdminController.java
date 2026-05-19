@@ -1,11 +1,13 @@
 package com.aram.mayhem.controller;
 
 import com.aram.mayhem.common.Result;
+import com.aram.mayhem.dto.SyncResult;
 import com.aram.mayhem.dto.TrapMarkRequest;
 import com.aram.mayhem.entity.Augment;
 import com.aram.mayhem.entity.Hero;
 import com.aram.mayhem.mapper.AugmentMapper;
 import com.aram.mayhem.mapper.HeroMapper;
+import com.aram.mayhem.scheduler.DataSyncScheduler;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
@@ -34,10 +36,12 @@ public class AdminController {
 
     private final HeroMapper heroMapper;
     private final AugmentMapper augmentMapper;
+    private final DataSyncScheduler dataSyncScheduler;
 
-    public AdminController(HeroMapper heroMapper, AugmentMapper augmentMapper) {
+    public AdminController(HeroMapper heroMapper, AugmentMapper augmentMapper, DataSyncScheduler dataSyncScheduler) {
         this.heroMapper = heroMapper;
         this.augmentMapper = augmentMapper;
+        this.dataSyncScheduler = dataSyncScheduler;
     }
 
     /**
@@ -106,5 +110,17 @@ public class AdminController {
 
         log.info("Augment trap mark updated: augmentId={}, isVersionTrap={}", id, request.getIsVersionTrap());
         return Result.success();
+    }
+
+    @Operation(summary = "手动触发数据同步", description = "管理员手动触发全量数据同步（采集→聚合→验证→写入）")
+    @PostMapping("/sync/trigger")
+    public Result<SyncResult> triggerSync() {
+        log.info("Admin triggered manual data sync");
+        SyncResult result = dataSyncScheduler.syncAllData();
+        if (result.isSuccess()) {
+            return Result.success(result);
+        } else {
+            return Result.error(500, result.getErrorMessage());
+        }
     }
 }

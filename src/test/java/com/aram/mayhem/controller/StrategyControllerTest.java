@@ -1,20 +1,23 @@
 package com.aram.mayhem.controller;
 
+import com.aram.mayhem.common.GlobalExceptionHandler;
 import com.aram.mayhem.dto.PageResult;
 import com.aram.mayhem.dto.StrategyDetailVO;
 import com.aram.mayhem.dto.StrategyListVO;
-import com.aram.mayhem.dto.VoteRequest;
-import com.aram.mayhem.entity.User;
+import com.aram.mayhem.security.JwtAuthenticationFilter;
 import com.aram.mayhem.service.StrategyService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Arrays;
@@ -28,6 +31,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @DisplayName("StrategyController 测试")
 @WebMvcTest(StrategyController.class)
+@AutoConfigureMockMvc(addFilters = false)
+@Import(GlobalExceptionHandler.class)
 class StrategyControllerTest {
 
     @Autowired
@@ -36,14 +41,28 @@ class StrategyControllerTest {
     @MockBean
     private StrategyService strategyService;
 
+    @MockBean
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
+
     @Autowired
     private ObjectMapper objectMapper;
 
     private List<StrategyListVO> mockStrategyList;
     private StrategyDetailVO mockStrategyDetail;
 
+    private void setupAuth(Long userId) {
+        UsernamePasswordAuthenticationToken auth =
+                new UsernamePasswordAuthenticationToken(userId.toString(), null, java.util.Collections.emptyList());
+        SecurityContextHolder.getContext().setAuthentication(auth);
+    }
+
+    private void clearAuth() {
+        SecurityContextHolder.clearContext();
+    }
+
     @BeforeEach
     void setUp() {
+        clearAuth();
         StrategyListVO strategy1 = new StrategyListVO();
         strategy1.setId(1L);
         strategy1.setUserId(1L);
@@ -132,33 +151,37 @@ class StrategyControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/strategies/{id} - 玩法不存在返回 404")
+    @DisplayName("GET /api/strategies/{id} - 玩法不存在返回业务错误码404")
     void getStrategyDetail_notFound() throws Exception {
         when(strategyService.getStrategyDetail(eq(999L))).thenReturn(null);
 
         mockMvc.perform(get("/api/strategies/999"))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(404))
+                .andExpect(jsonPath("$.message").value("玩法不存在"));
     }
 
     @Test
-    @DisplayName("POST /api/strategies - 未登录无法发布玩法")
+    @DisplayName("POST /api/strategies - 未登录返回业务错误码401")
     void createStrategy_unauthorized() throws Exception {
+        clearAuth();
         mockMvc.perform(post("/api/strategies")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"heroId\": 1, \"title\": \"测试\", \"description\": \"测试描述\"}")
+                        .content("{\"heroId\": 1, \"title\": \"测试标题\", \"description\": \"这是一段测试描述内容\"}")
                         .with(csrf()))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(401));
     }
 
     @Test
-    @WithMockUser(username = "1")
     @DisplayName("POST /api/strategies - 发布玩法成功")
     void createStrategy_success() throws Exception {
+        setupAuth(1L);
         when(strategyService.createStrategy(eq(1L), eq(1L), eq("亚索新玩法"),
-                eq("新玩法描述"), any(), any()))
+                eq("亚索新玩法的详细描述内容"), any(), any()))
                 .thenReturn(mockStrategyDetail);
 
-        String requestJson = "{\"heroId\": 1, \"title\": \"亚索新玩法\", \"description\": \"新玩法描述\", \"augmentIds\": [1, 2], \"itemIds\": []}";
+        String requestJson = "{\"heroId\": 1, \"title\": \"亚索新玩法\", \"description\": \"亚索新玩法的详细描述内容\", \"augmentIds\": [1, 2], \"itemIds\": []}";
 
         mockMvc.perform(post("/api/strategies")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -167,23 +190,25 @@ class StrategyControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.id").value(1));
+        clearAuth();
     }
 
     @Test
-    @WithMockUser(username = "1")
-    @DisplayName("POST /api/strategies - 英雄不存在返回错误")
+    @DisplayName("POST /api/strategies - 英雄不存在返回业务错误码400")
     void createStrategy_heroNotFound() throws Exception {
+        setupAuth(1L);
         when(strategyService.createStrategy(anyLong(), anyLong(), anyString(), anyString(), any(), any()))
                 .thenThrow(new IllegalArgumentException("英雄不存在"));
 
-        String requestJson = "{\"heroId\": 999, \"title\": \"测试\", \"description\": \"测试描述\"}";
+        String requestJson = "{\"heroId\": 999, \"title\": \"测试标题\", \"description\": \"这是一段测试描述内容\"}";
 
         mockMvc.perform(post("/api/strategies")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestJson)
                         .with(csrf()))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(400))
                 .andExpect(jsonPath("$.message").value("英雄不存在"));
+        clearAuth();
     }
 }

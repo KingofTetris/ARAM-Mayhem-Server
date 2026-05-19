@@ -166,7 +166,7 @@ public class AugmentDataInitializer implements CommandLineRunner {
         augment.setSynergySet(synergySet);
         augment.setSynergySet2(synergySet2);
         augment.setSynergySet3(synergySet3);
-        augment.setIconUrl("/images/augments/" + nameEn.toLowerCase().replace(" ", "_") + ".png");
+        augment.setIconUrl("/images/augments/" + nameEn.toLowerCase().trim().replace(" ", "_") + ".png");
         augment.setWinRate(BigDecimal.valueOf(winRate));
         augment.setPickRate(BigDecimal.valueOf(pickRate));
         augment.setAvgPlacement(BigDecimal.valueOf(avgPlacement));
