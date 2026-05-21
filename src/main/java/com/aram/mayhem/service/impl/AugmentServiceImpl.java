@@ -16,6 +16,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -131,6 +132,7 @@ public class AugmentServiceImpl implements AugmentService {
      * @return AugmentVO 符文详情，不存在返回null
      */
     @Override
+    @Cacheable(value = "augmentDetail", key = "#id", unless = "#result == null")
     public AugmentVO getAugmentDetail(Long id) {
         Augment augment = augmentMapper.selectById(id);
         if (augment == null) {

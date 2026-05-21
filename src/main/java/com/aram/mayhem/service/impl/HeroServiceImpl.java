@@ -59,6 +59,7 @@ public class HeroServiceImpl implements HeroService {
      * @return PageResult<HeroListVO> 分页英雄列表
      */
     @Override
+    @Cacheable(value = "heroList", key = "#page + ':' + #size + ':' + (#keyword != null ? #keyword : '') + ':' + (#tier != null ? #tier : '') + ':' + (#sortBy != null ? #sortBy : '')", unless = "#result == null || #result.records.isEmpty()")
     public PageResult<HeroListVO> getHeroList(int page, int size, String keyword, String tier, String sortBy) {
         LambdaQueryWrapper<Hero> queryWrapper = new LambdaQueryWrapper<>();
 
