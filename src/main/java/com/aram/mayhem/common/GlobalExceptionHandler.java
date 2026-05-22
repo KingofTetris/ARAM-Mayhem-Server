@@ -4,6 +4,7 @@ import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -48,6 +49,13 @@ public class GlobalExceptionHandler {
     public Result<Void> handleBusiness(BusinessException ex) {
         log.warn("Business error: code={}, message={}", ex.getCode(), ex.getMessage());
         return Result.error(ex.getCode(), ex.getMessage());
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public Result<Void> handleAccessDenied(AccessDeniedException ex) {
+        log.warn("Access denied: {}", ex.getMessage());
+        return Result.error(403, "access denied");
     }
 
     @ExceptionHandler(Exception.class)

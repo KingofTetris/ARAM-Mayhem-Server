@@ -1,0 +1,41 @@
+server:
+  port: 0
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:aram_test;DB_CLOSE_DELAY=-1;MODE=MySQL
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+
+jwt:
+  secret: YXJhbS1tYXloZW0tand0LXNlY3JldC1rZXktMjAyNC1wcm9kLXVzZS1sb25nLXNlY3JldA==
+  access-token-expiration: 900000
+  refresh-token-expiration: 604800000
+
+datadragon:
+  base-url: https://ddragon.leagueoflegends.com
+  locale: zh_CN
+  connect-timeout: 5
+  read-timeout: 5
+
+aramdata:
+  base-url: https://u.gg/lol/aram
+  request-interval-ms: 100
+  user-agents:
+    - "Test-Agent"
+
+sync:
+  cron: "0 0 */6 * * ?"
+  lock-key: "aram:sync:lock"
+  lock-ttl-minutes: 30
+  warmup-top-n: 50
