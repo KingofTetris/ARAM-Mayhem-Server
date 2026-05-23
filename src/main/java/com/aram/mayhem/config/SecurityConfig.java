@@ -95,6 +95,8 @@ public class SecurityConfig {
                         .requestMatchers("GET", "/api/strategies/**").permitAll()
                         // Swagger API 文档 —— 公开访问（方便开发调试）
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        // 静态资源（英雄/符文图片等）—— 公开访问
+                        .requestMatchers("/images/**").permitAll()
                         // 健康检查端点 —— 公开访问（用于部署监控）
                         .requestMatchers("/actuator/health").permitAll()
                         // 其他所有请求 —— 必须认证（兜底规则：没明确放行的都需要登录）
