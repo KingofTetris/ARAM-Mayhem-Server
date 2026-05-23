@@ -169,6 +169,9 @@ public class PageResult<T> {
      * @param size    每页数量
      * @param records 当前页的数据列表（从数据库查询的当前页数据）
      */
+    public PageResult() {
+    }
+
     public PageResult(long total, int page, int size, List<T> records) {
         this.total = total;
         this.page = page;
