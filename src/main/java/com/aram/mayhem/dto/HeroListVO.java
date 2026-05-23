@@ -41,6 +41,9 @@ public class HeroListVO {
     private String role;
 
     /** 梯级评级 —— 如 S+/S/A/B/C，用颜色区分强度 */
+    private String tier;
+
+    /** ARAM 胜率 —— 如 52.35 表示 52.35% */
     private BigDecimal winRate;
 
     /** ARAM 选取率 —— 如 0.1530 表示 15.30% */
