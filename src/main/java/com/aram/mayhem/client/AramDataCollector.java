@@ -340,7 +340,7 @@ public class AramDataCollector {
      * @param url 目标 URL
      * @return HTML 字符串，失败时返回 null
      */
-    private String fetchPage(String url) {
+    String fetchPage(String url) {
         enforceRequestInterval();
         String userAgent = selectRandomUserAgent();
 
@@ -387,7 +387,7 @@ public class AramDataCollector {
      * @param doc Jsoup Document（由 Jsoup.parse(html) 生成）
      * @return 英雄统计列表
      */
-    private List<AramHeroStatsDTO> parseHeroStatsTable(Document doc) {
+    List<AramHeroStatsDTO> parseHeroStatsTable(Document doc) {
         List<AramHeroStatsDTO> results = new ArrayList<>();
 
         Elements rows = doc.select("table.tr-table tbody tr");
@@ -447,7 +447,7 @@ public class AramDataCollector {
      * @param row HTML 表格行元素（<tr>）
      * @return 英雄统计数据 DTO，解析失败时返回 null
      */
-    private AramHeroStatsDTO parseHeroRow(Element row) {
+    AramHeroStatsDTO parseHeroRow(Element row) {
         return parseHeroRow(row, -1);
     }
 
@@ -458,7 +458,7 @@ public class AramDataCollector {
      * @param rowIndex 行号（从1开始），用于日志定位问题行
      * @return 英雄统计数据 DTO，解析失败时返回 null
      */
-    private AramHeroStatsDTO parseHeroRow(Element row, int rowIndex) {
+    AramHeroStatsDTO parseHeroRow(Element row, int rowIndex) {
         // 获取该行的所有 td 单元格
         Elements cells = row.select("td");
 
@@ -518,7 +518,7 @@ public class AramDataCollector {
      * @param doc Jsoup Document
      * @return 符文统计列表
      */
-    private List<AramAugmentStatsDTO> parseAugmentStatsTable(Document doc) {
+    List<AramAugmentStatsDTO> parseAugmentStatsTable(Document doc) {
         List<AramAugmentStatsDTO> results = new ArrayList<>();
 
         Elements rows = doc.select("table.tr-table tbody tr");
@@ -567,7 +567,7 @@ public class AramDataCollector {
      * @param row HTML 表格行元素
      * @return 符文统计数据 DTO，解析失败时返回 null
      */
-    private AramAugmentStatsDTO parseAugmentRow(Element row) {
+    AramAugmentStatsDTO parseAugmentRow(Element row) {
         return parseAugmentRow(row, -1);
     }
 
@@ -588,7 +588,7 @@ public class AramDataCollector {
      * @param rowIndex 行号（从1开始）
      * @return 符文统计数据 DTO，解析失败时返回 null
      */
-    private AramAugmentStatsDTO parseAugmentRow(Element row, int rowIndex) {
+    AramAugmentStatsDTO parseAugmentRow(Element row, int rowIndex) {
         Elements cells = row.select("td");
         if (cells.size() < 4) {
             log.trace("[PARSE] augment row insufficient columns | rowIndex={} | cellCount={}", rowIndex, cells.size());
@@ -648,7 +648,7 @@ public class AramDataCollector {
      * @param cell HTML 单元格元素（td[1]）
      * @return 清洗后的英雄名称
      */
-    private String extractChampionName(Element cell) {
+    String extractChampionName(Element cell) {
         Element nameEl = cell.selectFirst("a, .champion-name, span");
         if (nameEl != null) {
             String raw = nameEl.text();
@@ -676,7 +676,7 @@ public class AramDataCollector {
      * @param cell HTML 单元格元素
      * @return 梯级评级（大写），找不到时返回 null
      */
-    private String extractTier(Element cell) {
+    String extractTier(Element cell) {
         Elements tierElements = cell.select(".tier, [class*=tier], img[alt*=tier]");
         if (!tierElements.isEmpty()) {
             String tierText = tierElements.first().text();
@@ -727,7 +727,7 @@ public class AramDataCollector {
      * @param cell HTML 单元格元素
      * @return 品质名称（中文），找不到时返回 null
      */
-    private String extractQuality(Element cell) {
+    String extractQuality(Element cell) {
         String className = cell.className();
         if (className.contains("prismatic") || className.contains("legendary")) {
             log.trace("[CLEAN] extractQuality (class) | className='{}' | quality=棱彩", className);
@@ -765,7 +765,7 @@ public class AramDataCollector {
      * @param cell HTML 单元格元素
      * @return 百分比数值（如 52.30），解析失败时返回 null
      */
-    private BigDecimal parsePercentCell(Element cell) {
+    BigDecimal parsePercentCell(Element cell) {
         String raw = cell.text();
         String cleaned = raw.trim().replace("%", "").replace(",", ".").trim();
         log.trace("[CLEAN] parsePercentCell | raw='{}' | cleaned='{}'", raw, cleaned);
@@ -788,7 +788,7 @@ public class AramDataCollector {
      * @param cell HTML 单元格元素
      * @return 数值（如 5.30），解析失败时返回 null
      */
-    private BigDecimal parseNumericCell(Element cell) {
+    BigDecimal parseNumericCell(Element cell) {
         String raw = cell.text();
         String cleaned = raw.trim().replace(",", ".").trim();
         log.trace("[CLEAN] parseNumericCell | raw='{}' | cleaned='{}'", raw, cleaned);
@@ -810,7 +810,7 @@ public class AramDataCollector {
      * @param cell HTML 单元格元素
      * @return 清洗后的文本
      */
-    private String extractText(Element cell) {
+    String extractText(Element cell) {
         String raw = cell.text();
         String cleaned = sanitize(raw);
         log.trace("[CLEAN] extractText | raw='{}' | cleaned='{}'", raw, cleaned);
@@ -827,7 +827,7 @@ public class AramDataCollector {
      * @param text 原始文本
      * @return 清洗后的文本，输入为 null 时返回 null
      */
-    private String sanitize(String text) {
+    String sanitize(String text) {
         if (text == null) {
             return null;
         }
@@ -880,7 +880,7 @@ public class AramDataCollector {
      *
      * @return 随机选择的 User-Agent 字符串
      */
-    private String selectRandomUserAgent() {
+    String selectRandomUserAgent() {
         if (userAgents == null || userAgents.isEmpty()) {
             log.trace("[RECEIVE] using default User-Agent | poolSize=0");
             return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
