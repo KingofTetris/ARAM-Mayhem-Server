@@ -12,15 +12,110 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 英雄数据初始化器 —— 应用启动时的"种子数据播种机"
+ *
+ * ═══════════════════════════════════════════════════════════════════
+ * 一、这个类是干什么的？
+ * ═══════════════════════════════════════════════════════════════════
+ *
+ * 这个类实现了 Spring Boot 的 CommandLineRunner 接口，在应用启动完成后自动执行。
+ * 它的作用是检查 tb_hero 表是否为空，如果为空则插入一批"种子数据"（初始英雄数据）。
+ *
+ * 打个比方：
+ * - 如果数据库是一块"空地"，那么本类就是"播种机"
+ * - 第一次启动时，空地上什么都没有，播种机自动播下种子
+ * - 之后启动时，空地上已经有庄稼了，播种机就不再播种（避免重复）
+ *
+ * ═══════════════════════════════════════════════════════════════════
+ * 二、CommandLineRunner 是什么？
+ * ═══════════════════════════════════════════════════════════════════
+ *
+ * CommandLineRunner 是 Spring Boot 提供的接口，只有一个方法：run(String... args)
+ * 所有实现了这个接口的 @Component，都会在 Spring 容器启动完成后自动执行 run 方法。
+ *
+ * 执行时机：ApplicationContext 完全初始化之后，Application.run() 返回之前
+ * 执行顺序：可以通过 @Order 注解或 Ordered 接口控制多个 Runner 的执行顺序
+ *
+ * ═══════════════════════════════════════════════════════════════════
+ * 三、幂等性设计
+ * ═══════════════════════════════════════════════════════════════════
+ *
+ * 本类是幂等的（Idempotent），即多次执行的结果与一次执行相同：
+ * - 第一次启动：tb_hero 为空 → 插入种子数据
+ * - 第二次启动：tb_hero 不为空 → 跳过插入
+ *
+ * 判断依据：heroMapper.selectCount(null) > 0
+ * 如果表中已有数据，说明之前已经初始化过，不需要重复插入。
+ *
+ * ═══════════════════════════════════════════════════════════════════
+ * 四、种子数据说明
+ * ═══════════════════════════════════════════════════════════════════
+ *
+ * 种子数据包含 167 个英雄的基础信息：
+ * - 英雄名称（英文/中文）、称号、角色定位
+ * - 梯级评级（S+/S/A/B）、胜率、选取率
+ * - 置信度等级（高/中/低，表示统计数据的可靠性）
+ *
+ * 注意：这些是"初始数据"，后续会被 DataSyncScheduler 的定时同步任务
+ * 从 Riot DataDragon 和 U.GG 获取最新数据覆盖。
+ * 种子数据的作用是确保应用首次启动时就有可展示的数据。
+ *
+ * ═══════════════════════════════════════════════════════════════════
+ * 五、事务说明
+ * ═══════════════════════════════════════════════════════════════════
+ *
+ * @Transactional 注解确保整个 run 方法在一个数据库事务中执行：
+ * - 如果插入过程中出现异常，所有已插入的数据都会回滚
+ * - 保证数据一致性：要么全部插入成功，要么全部不插入
+ *
+ * ═══════════════════════════════════════════════════════════════════
+ * 六、关联类
+ * ═══════════════════════════════════════════════════════════════════
+ *
+ * - Hero → 英雄实体类，对应 tb_hero 表
+ * - HeroMapper → MyBatis-Plus Mapper，提供 CRUD 操作
+ * - AugmentDataInitializer → 符文数据初始化器（类似的播种机）
+ * - BulletinDataInitializer → 公告数据初始化器（类似的播种机）
+ * - DataSyncScheduler → 定时同步调度器，后续会更新种子数据
+ */
 @Component
 public class DataInitializer implements CommandLineRunner {
 
+    /**
+     * HeroMapper —— MyBatis-Plus 提供的英雄表 CRUD 操作接口
+     *
+     * 主要使用的方法：
+     * - selectCount(null)：查询表中总记录数（null 表示无条件）
+     * - insert(hero)：插入一条英雄记录
+     */
     private final HeroMapper heroMapper;
 
+    /**
+     * 构造函数 —— Spring 自动注入 HeroMapper
+     *
+     * @param heroMapper 英雄表 Mapper（由 MyBatis-Plus 自动生成实现类）
+     */
     public DataInitializer(HeroMapper heroMapper) {
         this.heroMapper = heroMapper;
     }
 
+    /**
+     * 按角色定位分组的克制建议
+     *
+     * ══════════════════════════════════════════════════════════════
+     * 数据结构
+     * ══════════════════════════════════════════════════════════════
+     *
+     * Key：角色定位（Fighter/Mage/Assassin/Tank/Marksman/Support）
+     * Value：克制该角色的建议列表（4条建议）
+     *
+     * 示例：对抗战士（Fighter）的建议：
+     * - "保持距离风筝" → 战士需要贴身，保持距离就能避免伤害
+     * - "利用控制技能打断突进" → 战士依赖突进技能近身
+     * - "集火优先击杀" → 战士通常不是最肉的目标
+     * - "购买护甲装备对抗" → 战士主要造成物理伤害
+     */
     private static final Map<String, List<String>> COUNTER_TIPS_BY_ROLE = Map.of(
             "Fighter", List.of("保持距离风筝", "利用控制技能打断突进", "集火优先击杀", "购买护甲装备对抗"),
             "Mage", List.of("利用突进贴身", "购买魔抗装备", "躲避关键技能后反打", "侧翼切入绕过前排"),
@@ -30,6 +125,18 @@ public class DataInitializer implements CommandLineRunner {
             "Support", List.of("优先击杀辅助", "忽略辅助打C位", "利用AOE同时伤害", "购买重伤克制治疗")
     );
 
+    /**
+     * 按角色定位分组的搭配建议
+     *
+     * Key：角色定位
+     * Value：与该角色搭配良好的队友类型列表（4条建议）
+     *
+     * 示例：战士（Fighter）适合搭配：
+     * - "控制型坦克" → 坦克控制敌人，战士跟进输出
+     * - "增益型辅助" → 辅助提供增益，战士更强
+     * - "AOE法师" → 法师群体伤害，战士收割残血
+     * - "保护型辅助" → 辅助保护战士不被集火
+     */
     private static final Map<String, List<String>> SYNERGIES_BY_ROLE = Map.of(
             "Fighter", List.of("控制型坦克", "增益型辅助", "AOE法师", "保护型辅助"),
             "Mage", List.of("前排坦克", "控制型辅助", "突进战士", "开团型坦克"),
@@ -39,6 +146,21 @@ public class DataInitializer implements CommandLineRunner {
             "Support", List.of("持续输出射手", "突进战士", "AOE法师", "前排坦克")
     );
 
+    /**
+     * 按角色定位分组的推荐出装路线
+     *
+     * Key：角色定位
+     * Value：推荐出装路线（6件装备，按购买顺序排列）
+     *
+     * 示例：战士（Fighter）推荐出装：
+     * "渴血战斧 → 斯特拉克的挑战护手 → 破败王者之刃 → 振奋盔甲 → 兰顿之兆 → 铁板靴"
+     * - 渴血战斧：核心输出装备
+     * - 斯特拉克的挑战护手：提供护盾和韧性
+     * - 破败王者之刃：百分比伤害 + 续航
+     * - 振奋盔甲：魔抗 + 治疗/护盾增强
+     * - 兰顿之兆：护甲 + 暴击减免
+     * - 铁板靴：护甲鞋
+     */
     private static final Map<String, String> RECOMMENDED_BUILD_BY_ROLE = Map.of(
             "Fighter", "渴血战斧 → 斯特拉克的挑战护手 → 破败王者之刃 → 振奋盔甲 → 兰顿之兆 → 铁板靴",
             "Mage", "卢登的伙伴 → 影焰 → 灭世者的死亡之帽 → 虚空之杖 → 中娅沙漏 → 法师之靴",
@@ -48,13 +170,40 @@ public class DataInitializer implements CommandLineRunner {
             "Support", "帝国指令 → 流水法杖 → 救赎 → 香炉 → 骑士之誓 → 明悟之靴"
     );
 
+    /**
+     * 应用启动后自动执行的方法 —— 检查并初始化英雄种子数据
+     *
+     * ══════════════════════════════════════════════════════════════
+     * 执行流程
+     * ══════════════════════════════════════════════════════════════
+     *
+     * 1. 检查 tb_hero 表是否已有数据（selectCount > 0）
+     * 2. 如果已有数据 → 直接返回（幂等性保证）
+     * 3. 如果没有数据 → 创建 167 个英雄的种子数据
+     * 4. 逐条插入到数据库
+     *
+     * ══════════════════════════════════════════════════════════════
+     * 为什么不用批量插入？
+     * ══════════════════════════════════════════════════════════════
+     *
+     * MyBatis-Plus 的 insert 方法一次只插入一条记录。
+     * 虽然可以使用 SQL 批量插入提升性能，但：
+     * - 种子数据只在首次启动时执行一次，性能不是关键
+     * - 逐条插入更安全，如果某条数据有问题不会影响其他数据
+     * - @Transactional 保证整体原子性
+     *
+     * @param args Spring Boot 启动参数（本类不使用）
+     */
     @Override
     @Transactional
     public void run(String... args) {
+        // 幂等性检查：如果表中已有数据，跳过初始化
         if (heroMapper.selectCount(null) > 0) {
             return;
         }
 
+        // 创建 167 个英雄的种子数据
+        // 每个英雄包含：Riot ID、英文名、中文名、称号、角色、梯级、胜率、选取率、置信度
         List<Hero> heroes = List.of(
                 createHero(1, "Aatrox", "亚托克斯", "暗裔剑魔", "Fighter", "S", 51.2, 8.5, "高"),
                 createHero(2, "Ahri", "阿狸", "九尾妖狐", "Mage", "A", 50.1, 12.3, "中"),
@@ -225,41 +374,78 @@ public class DataInitializer implements CommandLineRunner {
                 createHero(167, "Zyra", "婕拉", "荆棘之兴", "Mage", "S", 52.9, 6.8, "低")
         );
 
+        // 逐条插入到 tb_hero 表
+        // forEach + 方法引用是 Java 8 的简洁写法，等价于 heroes.forEach(h -> heroMapper.insert(h))
         heroes.forEach(heroMapper::insert);
     }
 
+    /**
+     * 创建单个英雄实体 —— 种子数据的工厂方法
+     *
+     * ══════════════════════════════════════════════════════════════
+     * 参数说明
+     * ══════════════════════════════════════════════════════════════
+     *
+     * @param riotId          Riot Games 官方英雄 ID（如 Aatrox = 266，这里简化为序号）
+     * @param nameEn          英文名（如 "Aatrox"），用于拼接图片 URL
+     * @param nameZh          中文名（如 "亚托克斯"），用于前端显示
+     * @param title           称号（如 "暗裔剑魔"），英雄的副标题
+     * @param role            角色定位（Fighter/Mage/Assassin/Tank/Marksman/Support）
+     * @param tier            梯级评级（S+/S/A/B），表示英雄在 ARAM 中的强度
+     * @param winRate         胜率（如 51.2 表示 51.2%）
+     * @param pickRate        选取率（如 8.5 表示 8.5%）
+     * @param confidenceLevel 置信度等级（高/中/低），表示统计数据的样本量可靠性
+     * @return 完整的 Hero 实体对象
+     */
     private Hero createHero(int riotId, String nameEn, String nameZh, String title,
                             String role, String tier, double winRate,
                             double pickRate, String confidenceLevel) {
         Hero hero = new Hero();
-        hero.setRiotId(riotId);
-        hero.setNameEn(nameEn);
-        hero.setNameZh(nameZh);
-        hero.setTitle(title);
-        hero.setRole(role);
-        hero.setImageUrl("/images/heroes/" + nameEn + ".png");
-        hero.setTier(tier);
-        hero.setWinRate(BigDecimal.valueOf(winRate));
-        hero.setPickRate(BigDecimal.valueOf(pickRate));
-        hero.setConfidenceLevel(confidenceLevel);
-        hero.setDescription(generateDescription(nameZh, title, role));
-        hero.setSkills(generateSkills(nameEn, role));
-        hero.setCounterTips(COUNTER_TIPS_BY_ROLE.getOrDefault(role, List.of()));
-        hero.setSynergies(SYNERGIES_BY_ROLE.getOrDefault(role, List.of()));
-        hero.setAvgKills(generateAvgKills(role));
-        hero.setAvgDeaths(generateAvgDeaths(role));
-        hero.setAvgAssists(generateAvgAssists(role));
-        hero.setRecommendedBuild(RECOMMENDED_BUILD_BY_ROLE.getOrDefault(role, "通用出装路线"));
-        hero.setVersion("14.10");
-        hero.setUpdatedAt(LocalDateTime.now());
+        hero.setRiotId(riotId);                                    // Riot 官方 ID
+        hero.setNameEn(nameEn);                                    // 英文名
+        hero.setNameZh(nameZh);                                    // 中文名
+        hero.setTitle(title);                                      // 称号
+        hero.setRole(role);                                        // 角色定位
+        hero.setImageUrl("/images/heroes/" + nameEn + ".png");     // 图片 URL，按英文名拼接
+        hero.setTier(tier);                                        // 梯级评级
+        hero.setWinRate(BigDecimal.valueOf(winRate));              // 胜率
+        hero.setPickRate(BigDecimal.valueOf(pickRate));            // 选取率
+        hero.setConfidenceLevel(confidenceLevel);                  // 置信度
+        hero.setDescription(generateDescription(nameZh, title, role));  // 自动生成的描述
+        hero.setSkills(generateSkills(nameEn, role));              // 按角色生成的技能列表
+        hero.setCounterTips(COUNTER_TIPS_BY_ROLE.getOrDefault(role, List.of()));  // 按角色查找克制建议
+        hero.setSynergies(SYNERGIES_BY_ROLE.getOrDefault(role, List.of()));        // 按角色查找搭配建议
+        hero.setAvgKills(generateAvgKills(role));                  // 按角色生成的场均击杀
+        hero.setAvgDeaths(generateAvgDeaths(role));                // 按角色生成的场均死亡
+        hero.setAvgAssists(generateAvgAssists(role));              // 按角色生成的场均助攻
+        hero.setRecommendedBuild(RECOMMENDED_BUILD_BY_ROLE.getOrDefault(role, "通用出装路线"));  // 推荐出装
+        hero.setVersion("14.10");                                  // 数据版本号
+        hero.setUpdatedAt(LocalDateTime.now());                    // 更新时间
         return hero;
     }
 
+    /**
+     * 生成英雄描述文本
+     *
+     * 格式："{中文名}，{称号}。在ARAM模式中定位为{角色中文}，需要根据队伍阵容灵活调整打法。合理利用技能组合和站位是取胜关键。"
+     * 示例："亚托克斯，暗裔剑魔。在ARAM模式中定位为战士，需要根据队伍阵容灵活调整打法。合理利用技能组合和站位是取胜关键。"
+     *
+     * @param nameZh 中文名
+     * @param title  称号
+     * @param role   角色定位（英文）
+     * @return 描述文本
+     */
     private String generateDescription(String nameZh, String title, String role) {
         return nameZh + "，" + title + "。在ARAM模式中定位为" + getRoleZh(role) +
                 "，需要根据队伍阵容灵活调整打法。合理利用技能组合和站位是取胜关键。";
     }
 
+    /**
+     * 将英文角色定位转换为中文
+     *
+     * @param role 英文角色定位（如 "Fighter"）
+     * @return 中文角色定位（如 "战士"）
+     */
     private String getRoleZh(String role) {
         return switch (role) {
             case "Fighter" -> "战士";
@@ -272,21 +458,47 @@ public class DataInitializer implements CommandLineRunner {
         };
     }
 
+    /**
+     * 生成英雄技能列表（5个技能：被动 + Q/W/E/R）
+     *
+     * ══════════════════════════════════════════════════════════════
+     * 为什么是"生成"而不是"真实数据"？
+     * ══════════════════════════════════════════════════════════════
+     *
+     * 种子数据中的技能名称和描述是按角色模板生成的通用内容，
+     * 不是每个英雄的真实技能。这是因为：
+     * - 167 个英雄的真实技能数据量太大，不适合硬编码
+     * - 真实技能数据会由 DataSyncScheduler 从 Riot DataDragon 同步
+     * - 种子数据只需要保证应用首次启动时有可展示的内容
+     *
+     * @param nameEn 英雄英文名（预留参数，当前未使用）
+     * @param role   角色定位
+     * @return 5个技能的数据列表
+     */
     private List<Hero.SkillData> generateSkills(String nameEn, String role) {
         List<Hero.SkillData> skills = new ArrayList<>();
-        String[] keys = {"P", "Q", "W", "E", "R"};
-        String[] names = generateSkillNames(nameEn, role);
-        String[] descriptions = generateSkillDescriptions(role);
+        String[] keys = {"P", "Q", "W", "E", "R"};                          // 技能按键
+        String[] names = generateSkillNames(nameEn, role);                    // 技能名称
+        String[] descriptions = generateSkillDescriptions(role);              // 技能描述
         for (int i = 0; i < 5; i++) {
             Hero.SkillData skill = new Hero.SkillData();
-            skill.setKey(keys[i]);
-            skill.setName(names[i]);
-            skill.setDescription(descriptions[i]);
+            skill.setKey(keys[i]);                                            // P/Q/W/E/R
+            skill.setName(names[i]);                                          // 技能名称
+            skill.setDescription(descriptions[i]);                            // 技能描述
             skills.add(skill);
         }
         return skills;
     }
 
+    /**
+     * 按角色生成技能名称模板
+     *
+     * 每个角色有5个技能名称（被动+Q/W/E/R），按角色类型使用不同的名称模板。
+     *
+     * @param nameEn 英雄英文名（预留参数）
+     * @param role   角色定位
+     * @return 5个技能名称的数组
+     */
     private String[] generateSkillNames(String nameEn, String role) {
         return switch (role) {
             case "Fighter" -> new String[]{"战斗本能", "突进斩击", "防御姿态", "战意冲锋", "终极裁决"};
@@ -299,6 +511,15 @@ public class DataInitializer implements CommandLineRunner {
         };
     }
 
+    /**
+     * 按角色生成技能描述模板
+     *
+     * 每个角色有5个技能描述，描述了技能的效果机制。
+     * 注意：这些是通用模板，不是英雄的真实技能描述。
+     *
+     * @param role 角色定位
+     * @return 5个技能描述的数组
+     */
     private String[] generateSkillDescriptions(String role) {
         return switch (role) {
             case "Fighter" -> new String[]{
@@ -347,6 +568,20 @@ public class DataInitializer implements CommandLineRunner {
         };
     }
 
+    /**
+     * 按角色生成场均击杀数（含随机波动）
+     *
+     * 不同角色的场均击杀数基准不同：
+     * - 刺客（7.5~10.5）：最高，因为刺客就是负责击杀的
+     * - 法师（6.0~9.0）：较高，AOE 伤害容易收割
+     * - 战士（5.5~8.5）：中等，近战输出
+     * - 射手（5.0~8.0）：中等，持续输出
+     * - 坦克（3.5~5.5）：较低，主要不是输出
+     * - 辅助（2.0~4.0）：最低，主要不是击杀
+     *
+     * @param role 角色定位
+     * @return 场均击杀数
+     */
     private BigDecimal generateAvgKills(String role) {
         return switch (role) {
             case "Assassin" -> BigDecimal.valueOf(7.5 + Math.random() * 3);
@@ -359,6 +594,20 @@ public class DataInitializer implements CommandLineRunner {
         };
     }
 
+    /**
+     * 按角色生成场均死亡数（含随机波动）
+     *
+     * 不同角色的场均死亡数基准不同：
+     * - 刺客（5.5~7.5）：最高，近身输出容易被反杀
+     * - 射手（5.0~7.0）：较高，脆皮容易被秒
+     * - 法师（4.5~6.5）：中等
+     * - 战士（4.0~6.0）：中等
+     * - 坦克（3.5~5.5）：较低，肉不容易死
+     * - 辅助（4.0~6.0）：中等
+     *
+     * @param role 角色定位
+     * @return 场均死亡数
+     */
     private BigDecimal generateAvgDeaths(String role) {
         return switch (role) {
             case "Assassin" -> BigDecimal.valueOf(5.5 + Math.random() * 2);
@@ -371,6 +620,20 @@ public class DataInitializer implements CommandLineRunner {
         };
     }
 
+    /**
+     * 按角色生成场均助攻数（含随机波动）
+     *
+     * 不同角色的场均助攻数基准不同：
+     * - 辅助（10.0~14.0）：最高，辅助就是帮助队友的
+     * - 坦克（8.0~11.0）：较高，开团和控制贡献助攻
+     * - 法师（7.0~10.0）：中等，AOE 伤害蹭助攻
+     * - 战士（6.0~9.0）：中等
+     * - 刺客（5.0~8.0）：较低，主要追求击杀而非助攻
+     * - 射手（5.0~7.0）：最低，独立输出
+     *
+     * @param role 角色定位
+     * @return 场均助攻数
+     */
     private BigDecimal generateAvgAssists(String role) {
         return switch (role) {
             case "Support" -> BigDecimal.valueOf(10.0 + Math.random() * 4);

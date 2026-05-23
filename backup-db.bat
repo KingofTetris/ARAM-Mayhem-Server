@@ -11,6 +11,8 @@ set DB_PORT=3306
 set DB_USER=root
 set DB_PASS=root
 set DB_NAME=aram_mayhem
+set MYSQL_BIN=D:\dev\mysql\bin
+set PATH=%MYSQL_BIN%;%PATH%
 set BACKUP_DIR=backups
 set TIMESTAMP=%date:~0,4%%date:~5,2%%date:~8,2%_%time:~0,2%%time:~3,2%%time:~6,2%
 set TIMESTAMP=%TIMESTAMP: =0%

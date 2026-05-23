@@ -6,56 +6,155 @@ import com.aram.mayhem.entity.Hero;
 import java.util.List;
 
 /**
- * 数据聚合服务接口
+ * 数据聚合服务接口 —— 多数据源合并的"数据加工厂"
  *
- * 功能：合并 RiotDataDragon（英雄基础信息）+ AramDataCollector（ARAM 胜率数据）→ Hero/Augment 实体
- * 数据流：
+ * ═══════════════════════════════════════════════════════════════════
+ * 一、这个接口是干什么的？
+ * ═══════════════════════════════════════════════════════════════════
+ *
+ * 这个接口负责从多个数据源采集数据，合并、清洗后生成最终的英雄和符文实体。
+ * 它是整个数据管线的核心环节。
+ *
+ * 打个比方：
+ * - 数据源1（RiotDataDragon）= 英雄的"户口本"（姓名、称号、技能等基础信息）
+ * - 数据源2（AramDataCollector）= 英雄的"成绩单"（胜率、选取率等统计数据）
+ * - DataAggregatorService = 把户口本和成绩单合并成一份完整档案的工作人员
+ *
+ * ═══════════════════════════════════════════════════════════════════
+ * 二、数据流图
+ * ═══════════════════════════════════════════════════════════════════
+ *
  *   RiotDataDragonClient.fetchChampionList() ─┐
- *   AramDataCollector.collectAramStats()  ─────┤→ DataAggregatorService.aggregateHeroData() → List<Hero>
- *                                              │
- *   AramDataCollector.collectAugmentStats() ───┘→ DataAggregatorService.aggregateAugmentData() → List<Augment>
- * 关联：DataSyncScheduler（定时调用聚合方法）
+ *   （英雄基础信息：名称、称号、技能、图标）      │
+ *                                              ├──► DataAggregatorService
+ *   AramDataCollector.collectAramStats()  ─────┤    （合并+清洗）
+ *   （ARAM统计数据：胜率、选取率、梯级）          │
+ *                                              │         │
+ *   AramDataCollector.collectAugmentStats() ───┘         ▼
+ *   （符文统计数据）                              ┌──────────────┐
+ *                                                │ List<Hero>   │
+ *                                                │ List<Augment>│
+ *                                                └──────────────┘
+ *                                                      │
+ *                                                      ▼
+ *                                              写入数据库（upsert）
+ *
+ * ═══════════════════════════════════════════════════════════════════
+ * 三、数据清洗规则
+ * ═══════════════════════════════════════════════════════════════════
+ *
+ * 【胜率（winRate）】
+ * - 有效范围：0~100%
+ * - 超出范围会被裁剪到边界值
+ * - 缺值时填充默认值50.00%
+ *
+ * 【选取率（pickRate）】
+ * - 有效范围：0~100%
+ * - 超出范围会被裁剪到边界值
+ * - 缺值时填充默认值0.00%
+ *
+ * 【平均排名（avgPlacement）】
+ * - 有效范围：1~8（ARAM模式最多8人）
+ * - 超出范围会被裁剪到边界值
+ * - 缺值时填充默认值4.50
+ *
+ * 【梯级（tier）】
+ * - 有效值：S+、S、A、B、C
+ * - 无效值会被替换为默认值C
+ *
+ * ═══════════════════════════════════════════════════════════════════
+ * 四、Upsert 策略
+ * ═══════════════════════════════════════════════════════════════════
+ *
+ * aggregateAndSaveHeroData() 和 aggregateAndSaveAugmentData() 使用 upsert 策略：
+ * - 先按 nameEn（英文名）查询数据库是否已有该记录
+ * - 如果已有 → 更新现有记录（UPDATE）
+ * - 如果没有 → 插入新记录（INSERT）
+ *
+ * 这样可以保证数据同步是幂等的（多次执行结果相同）。
+ *
+ * ═══════════════════════════════════════════════════════════════════
+ * 五、实现类
+ * ═══════════════════════════════════════════════════════════════════
+ *
+ * @see com.aram.mayhem.service.impl.DataAggregatorServiceImpl 数据聚合服务实现类
  */
 public interface DataAggregatorService {
 
     /**
-     * 聚合英雄数据
+     * 聚合英雄数据 —— 合并两个数据源的英雄信息
      *
-     * 合并 RiotDataDragon 英雄基础信息（名称、称号、技能、图标）与 AramDataCollector ARAM 统计数据（胜率、选取率、梯级）
-     * 匹配规则：以 championName（英文名）为关联键
-     * 清洗规则：胜率范围 0-100%，选取率范围 0-100%，缺值填充默认值
+     * ═══════════════════════════════════════════════════════════════
+     * 功能说明
+     * ═══════════════════════════════════════════════════════════════
      *
-     * @param version Data Dragon 版本号
-     * @return 聚合后的英雄实体列表
+     * 从两个数据源采集英雄数据并合并：
+     * 1. RiotDataDragon → 英雄基础信息（名称、称号、技能、图标URL）
+     * 2. AramDataCollector → ARAM统计数据（胜率、选取率、梯级、KDA）
+     *
+     * 【匹配规则】
+     * 以英文名（nameEn）为关联键，将两个数据源的同一英雄信息合并。
+     * 例如：RiotDataDragon的"Garen" + AramDataCollector的"Garen" → 合并为一个Hero实体
+     *
+     * 【未匹配处理】
+     * 如果某个英雄在AramDataCollector中没有统计数据，
+     * 则使用默认值填充统计字段，置信度标记为"low"。
+     *
+     * @param version Data Dragon 版本号（如"14.1.1"），用于构建图片URL
+     * @return List<Hero> 聚合后的英雄实体列表
+     *
+     * ═══════════════════════════════════════════════════════════════
+     * 调用示例
+     * ═══════════════════════════════════════════════════════════════
+     *
+     * // 聚合14.1.1版本的英雄数据
+     * List<Hero> heroes = dataAggregatorService.aggregateHeroData("14.1.1");
+     * System.out.println("聚合了 " + heroes.size() + " 个英雄");
      */
     List<Hero> aggregateHeroData(String version);
 
     /**
-     * 聚合强化符文数据
+     * 聚合符文数据 —— 将采集的符文统计数据转换为实体
      *
-     * 将 AramDataCollector 采集的符文统计数据转换为 Augment 实体
-     * 清洗规则：胜率范围 0-100%，选取率范围 0-100%，avgPlacement 范围 1-8
+     * ═══════════════════════════════════════════════════════════════
+     * 功能说明
+     * ═══════════════════════════════════════════════════════════════
      *
-     * @return 聚合后的符文实体列表
+     * 从 AramDataCollector 采集符文统计数据，经过数据清洗后转换为 Augment 实体。
+     * 无效数据（名称为空、胜率超出范围等）会被跳过。
+     *
+     * @return List<Augment> 聚合后的符文实体列表
      */
     List<Augment> aggregateAugmentData();
 
     /**
-     * 聚合英雄数据并写入数据库（upsert）
+     * 聚合英雄数据并写入数据库（upsert） —— 合并+持久化
      *
-     * 流程：aggregateHeroData() → 按 nameEn 查询已有记录 → 存在则更新，不存在则插入
+     * ═══════════════════════════════════════════════════════════════
+     * 功能说明
+     * ═══════════════════════════════════════════════════════════════
+     *
+     * 先调用 aggregateHeroData() 聚合数据，然后按 nameEn 查询数据库：
+     * - 已存在 → 更新该英雄的所有字段
+     * - 不存在 → 插入新的英雄记录
      *
      * @param version Data Dragon 版本号
-     * @return 写入的英雄实体列表
+     * @return List<Hero> 写入数据库后的英雄实体列表
      */
     List<Hero> aggregateAndSaveHeroData(String version);
 
     /**
-     * 聚合符文数据并写入数据库（upsert）
+     * 聚合符文数据并写入数据库（upsert） —— 合并+持久化
      *
-     * 流程：aggregateAugmentData() → 按 nameEn 查询已有记录 → 存在则更新，不存在则插入
+     * ═══════════════════════════════════════════════════════════════
+     * 功能说明
+     * ═══════════════════════════════════════════════════════════════
      *
-     * @return 写入的符文实体列表
+     * 先调用 aggregateAugmentData() 聚合数据，然后按 nameEn 查询数据库：
+     * - 已存在 → 更新该符文的所有字段
+     * - 不存在 → 插入新的符文记录
+     *
+     * @return List<Augment> 写入数据库后的符文实体列表
      */
     List<Augment> aggregateAndSaveAugmentData();
 }
