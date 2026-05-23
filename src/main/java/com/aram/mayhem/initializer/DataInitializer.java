@@ -406,7 +406,7 @@ public class DataInitializer implements CommandLineRunner {
         hero.setNameZh(nameZh);                                    // 中文名
         hero.setTitle(title);                                      // 称号
         hero.setRole(role);                                        // 角色定位
-        hero.setImageUrl("/images/heroes/" + nameEn + ".png");     // 图片 URL，按英文名拼接
+        hero.setImageUrl(String.format("https://ddragon.leagueoflegends.com/cdn/14.10/img/champion/%s.png", nameEn));     // 图片 URL，使用 Riot 官方 CDN
         hero.setTier(tier);                                        // 梯级评级
         hero.setWinRate(BigDecimal.valueOf(winRate));              // 胜率
         hero.setPickRate(BigDecimal.valueOf(pickRate));            // 选取率
