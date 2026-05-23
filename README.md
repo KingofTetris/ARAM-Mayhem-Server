@@ -59,8 +59,18 @@ java -jar target/aram-server-1.0.0.jar
 
 ## API 文档
 
-启动后访问：
-- Swagger UI: http://localhost:8080/swagger-ui.html
+启动后访问以下任一公开接口：
+
+```bash
+# 英雄列表（公开接口）
+http://localhost:8080/api/heroes
+
+# 或访问 Swagger UI（推荐）
+http://localhost:8080/swagger-ui/index.html
+```
+
+如果能看到 JSON 数据或 Swagger UI 页面，说明启动成功。
+
 - OpenAPI: http://localhost:8080/v3/api-docs
 
 ## 项目结构
