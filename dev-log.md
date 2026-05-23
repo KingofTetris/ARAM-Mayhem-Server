@@ -263,11 +263,74 @@
 
 ---
 
+## M5~M11 后端核心功能完成记录
+
+**开始时间**：2026-05-18 ~ 2026-05-23
+
+**实施内容**：
+
+1. **强化符文模块（Task 10-11）**
+   - AugmentController：GET /api/augments + POST /api/augments/recommend + GET /api/augments/synergy-progress
+   - AugmentServiceImpl：套装进度计算（去重逻辑）、智能推荐算法
+   - SynergyProgressResponse：套装激活效果列表
+
+2. **社区模块（Task 12-13）**
+   - StrategyController：CRUD + 分页排序 + 投票接口
+   - StrategyServiceImpl：热门排序(upvotes-downvotes)、时间排序、投票逻辑
+   - VoteController：POST /api/strategies/{id}/vote
+
+3. **公告模块（Task 14）**
+   - BulletinController：GET /api/bulletins 分页 + BulletinDataInitializer
+   - BulletinServiceImpl：置顶公告优先策略
+
+4. **个人中心（Task 15）**
+   - UserController：GET /api/users/me/profile + PATCH /api/users/me
+   - AuthService：登录/注册/Refresh Token 续期
+
+5. **数据管线（Task 16）**
+   - RiotDataDragonClient：Riot API 英雄数据抓取
+   - AramDataCollector：U.GG ARAM 胜率数据爬取
+   - DataAggregatorService：多源数据清洗合并
+   - MultiSourceValidator：交叉验证（置信度分级）
+   - DataSyncScheduler：定时同步 + Redis 分布式锁
+   - CacheWarmupService：缓存预热（Top50 英雄 + 全量符文）
+
+6. **安全增强**
+   - JwtTokenProvider：新增 getTokenType() 方法
+   - JwtAuthenticationFilter：Token 类型校验
+   - AccessDeniedException 处理修复
+
+7. **详细注释**
+   - 全文件标准化注释（7 大章节模板）
+   - Service/Controller/Repository 层完整注释
+   - DTO 字段注释完善
+
+**关键决策**：
+| 编号 | 决策 | 理由 |
+|------|------|------|
+| 63 | 套装进度使用 Set 去重 | 同一符文可能激活多个套装，避免重复计数 |
+| 64 | 投票使用 upsert 逻辑 | 重复点击取消投票，确保一用户一票 |
+| 65 | Redis 分布式锁防重复同步 | 多实例部署时防止数据覆盖 |
+| 66 | 置信度 LOW 时保留数据 | 异常数据仍可展示，仅标记低置信度 |
+
+**技术参数更新**：
+| 参数 | 值 |
+|------|-----|
+| Redis 分布式锁 Key | `lock:data-sync:{timestamp}` |
+| 缓存预热 TTL | 6 小时 |
+| 英雄列表缓存 TTL | 10 分钟 |
+| 符文列表缓存 TTL | 30 分钟 |
+| 同步调度周期 | 每 6 小时 |
+
+---
+
 ## 待办事项（按优先级）
 
-1. **[高] M3 安卓端**：8 个通用 UI 组件开发（TierBadgeView, HeroCardAdapter, AugmentCardAdapter 等）
-2. **[高] M3 安卓端**：AuthInterceptor + TokenRefreshInterceptor 实现
-3. **[高] M3 安卓端**：Retrofit API 接口定义 + Room Database 实现
-4. **[高] M4 后端**：DataInitializer 种子数据 + HeroController + HeroService
-5. **[中] M4 后端**：HeroService Redis 缓存策略
-6. **[低] M1 遗留**：Checkstyle + SpotBugs 代码规范配置
+~~1. ~~[高] M3 安卓端~~：8 个通用 UI 组件开发（TierBadgeView, HeroCardAdapter, AugmentCardAdapter 等）~~ ✅ 已完成
+~~2. ~~[高] M3 安卓端~~：AuthInterceptor + TokenRefreshInterceptor 实现~~ ✅ 已完成
+~~3. ~~[高] M3 安卓端~~：Retrofit API 接口定义 + Room Database 实现~~ ✅ 已完成
+~~4. ~~[高] M4 后端~~：DataInitializer 种子数据 + HeroController + HeroService~~ ✅ 已完成
+~~5. ~~[中] M4 后端~~：HeroService Redis 缓存策略~~ ✅ 已完成
+~~6. ~~[低] M1 遗留~~：Checkstyle + SpotBugs 代码规范配置~~ ✅ 已完成
+
+**M1~M11 全部完成** ✅ 2026-05-23
